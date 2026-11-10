@@ -15,7 +15,7 @@ Node 20 or later, and a Chromium-based browser: figkit uses Chrome or Edge if on
 `npx playwright install chromium` once.
 
 ```
-npm install figkit
+npm install @liggi/figkit
 npx figkit guide        # prints GUIDE.md, the rules for writing figures
 ```
 
