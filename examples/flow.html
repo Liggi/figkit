@@ -1,0 +1,50 @@
+<main class="fig detail" style="--w: 1560px">
+  <header>
+    <h1>Checkout prices the order before the checks finish, and <em>a check can restart it</em></h1>
+    <p class="read">The pricing and the checks start together. Nothing is charged until the checks answer.</p>
+  </header>
+
+  <div style="display: grid; grid-template-columns: 150px repeat(4, 1fr) 310px; column-gap: 44px; row-gap: 70px; margin-top: 40px">
+    <div class="node pill fill" id="msg" style="grid-column: 1; grid-row: 1 / span 2; align-self: center"><h3>Customer pays</h3></div>
+
+    <div class="node" id="choose" style="grid-column: 2; grid-row: 1"><h3>Pick the price list</h3><p>Fixed order, first match</p></div>
+    <div class="node" id="load" style="grid-column: 3; grid-row: 1"><h3>Load the prices</h3><p>One of 120 price lists</p></div>
+    <div class="node" id="build" style="grid-column: 4; grid-row: 1"><h3>Build the basket</h3><p>Items plus delivery</p></div>
+    <div class="node" id="call" style="grid-column: 5; grid-row: 1"><h3>Ask the bank</h3><p>Named by the price list</p></div>
+
+    <div class="group flush" id="checks" style="grid-column: 2 / span 3; grid-row: 2">
+      <span class="label">Checks, run alongside the pricing</span>
+      <div class="grid" style="--cols: 3; column-gap: 44px">
+        <div class="node"><h3>Discount rules</h3><p>Can change the total</p></div>
+        <div class="node"><h3>Fraud checks</h3><p>Can hold the order</p></div>
+        <div class="node"><h3>Stock checks</h3><p>Warehouse, suppliers</p></div>
+      </div>
+    </div>
+
+    <div class="node dashed" id="mon" style="grid-column: 5; grid-row: 2; margin: 27px 0 19px"><h3>Analytics</h3><p>Records only, never waited for</p></div>
+
+    <div class="decision accent" id="changed" style="grid-column: 6; grid-row: 1 / span 2"><span>Did a check change the total or the stock?</span></div>
+    <div class="decision" id="safe" style="grid-column: 6; grid-row: 3"><span>Is the order flagged for review?</span></div>
+
+    <div class="col" style="grid-column: 4; grid-row: 3; gap: 28px">
+      <div class="node" id="sent"><h3>Charged at once</h3><p>Reviewed afterwards</p></div>
+      <div class="node" id="held"><h3>Held for review</h3><p>Then charged, or cancelled</p></div>
+    </div>
+    <div class="node" id="done" style="grid-column: 2; grid-row: 3; align-self: center"><h3>On the paid order</h3><p>Analytics, then emails</p></div>
+  </div>
+
+  <fig-arrow from="msg" to="choose" label="pricing starts"></fig-arrow>
+  <fig-arrow from="msg" to="checks"></fig-arrow>
+  <fig-arrow from="choose" to="load"></fig-arrow>
+  <fig-arrow from="load" to="build"></fig-arrow>
+  <fig-arrow from="build" to="call"></fig-arrow>
+  <fig-arrow from="call" to="changed" label="total"></fig-arrow>
+  <fig-arrow from="checks" to="changed"></fig-arrow>
+  <fig-arrow from="changed" to="choose" accent weight="3.5" from-side="top" to-side="top" label="Yes: drop the total and price again"></fig-arrow>
+  <fig-arrow from="changed" to="safe" label="No: use the total"></fig-arrow>
+  <fig-arrow from="safe" to="sent" label="No, usually"></fig-arrow>
+  <fig-arrow from="safe" to="held" label="Yes"></fig-arrow>
+  <fig-arrow from="sent" to="done"></fig-arrow>
+  <fig-arrow from="held" to="done"></fig-arrow>
+  <fig-arrow from="done" to="msg" dashed label="The basket carries to the next order"></fig-arrow>
+</main>

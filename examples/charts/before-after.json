@@ -1,0 +1,16 @@
+{
+  "type": "before-after",
+  "title": "Late deliveries fell by three quarters after the route change",
+  "note": "Share of orders delivered late",
+  "unit": "%",
+  "before": {
+    "label": "Before 3 March",
+    "value": 18
+  },
+  "after": {
+    "label": "From 3 March",
+    "value": 4.5,
+    "tone": "good"
+  },
+  "source": "Invented example data"
+}

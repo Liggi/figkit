@@ -1,0 +1,33 @@
+<main class="fig">
+  <header>
+    <h1><code style="font-family: var(--mono); font-size: .78em">created_at</code> dates orders <em>days before their sale started</em></h1>
+    <p class="read">The <b class="t-second">payment stamp</b> lands within hours of each sale's start.</p>
+  </header>
+  <div id="chart"></div>
+  <script>
+    const D = (s) => new Date(s + "Z");
+    const rows = [
+      { name: "Spring sale", launch: D("2026-03-06T09:00"), arrive: D("2026-03-06T09:20"), fuzz: D("2026-03-01T15:00"), gap: "4.8 days early" },
+      { name: "Garden week", launch: D("2026-03-09T10:00"), arrive: D("2026-03-09T10:15"), fuzz: D("2026-03-01T12:00"), gap: "7.9 days early" },
+      { name: "Clearance", launch: D("2026-03-10T16:00"), arrive: D("2026-03-10T19:00"), fuzz: D("2026-03-03T04:00"), gap: "7.5 days early" },
+    ];
+    const mid = (r) => new Date((+r.launch + +r.fuzz) / 2);
+    fig.plot("#chart", ({ Plot, theme }) => ({
+      height: 350, marginLeft: 20, marginRight: 60, marginTop: 10, marginBottom: 44,
+      x: { label: null, domain: [D("2026-02-28T12:00"), D("2026-03-11T12:00")], ticks: 6, grid: true },
+      y: { domain: rows.map((r) => r.name), axis: null, padding: 0.5 },
+      marks: [
+        Plot.text(rows, { x: "fuzz", y: "name", text: "name", dy: -34, textAnchor: "start", fill: theme.ink, fontWeight: 600, fontSize: 18 }),
+        Plot.link(rows, { x1: "fuzz", x2: "launch", y1: "name", y2: "name", stroke: theme.accent, strokeWidth: 3 }),
+        Plot.text(rows, { x: mid, y: "name", text: "gap", dy: -16, fill: theme.accent, fontWeight: 600, fontSize: 17 }),
+        Plot.dot(rows, { x: "fuzz", y: "name", r: 7, fill: theme.accent }),
+        Plot.tickX(rows, { x: "launch", y: "name", stroke: theme.ink, strokeWidth: 3, insetTop: -4, insetBottom: -4 }),
+        Plot.dot(rows, { x: "arrive", y: "name", r: 7, fill: theme.second }),
+        Plot.text(rows.slice(0, 1), { x: "fuzz", y: "name", text: () => "earliest created_at", dx: -2, dy: 22, textAnchor: "start", fill: theme.accent, fontSize: 16 }),
+        Plot.text(rows.slice(0, 1), { x: "launch", y: "name", text: () => "sale starts", dx: 16, dy: -12, textAnchor: "start", fill: theme.ink, fontSize: 16 }),
+        Plot.text(rows.slice(0, 1), { x: "launch", y: "name", text: () => "first payment stamp", dx: 16, dy: 12, textAnchor: "start", fill: theme.second, fontSize: 16 }),
+      ],
+    }));
+  </script>
+  <footer><p>Invented data, for illustration.</p></footer>
+</main>

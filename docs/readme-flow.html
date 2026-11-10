@@ -1,0 +1,12 @@
+<main class="fig">
+  <header>
+    <h1>An order is <em>checked before it is charged</em></h1>
+  </header>
+  <div class="row wide">
+    <div class="node pill" id="cart"><h3>Basket</h3><p>3 items</p></div>
+    <div class="node accent" id="check"><h3>Fraud check</h3><p>Holds 1 order in 200</p></div>
+    <div class="node" id="pay"><h3>Charge the card</h3><p>£42.50</p></div>
+  </div>
+  <fig-arrow from="cart" to="check"></fig-arrow>
+  <fig-arrow from="check" to="pay" label="passed"></fig-arrow>
+</main>

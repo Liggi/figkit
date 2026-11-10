@@ -1,0 +1,8 @@
+{ "type": "bars", "title": "The new checkout halves the time to pay",
+  "note": "Median time from cart to payment",
+  "unit": " s",
+  "bars": [
+    { "label": "Current checkout", "value": 86 },
+    { "label": "New checkout", "value": 41, "tone": "good" }
+  ],
+  "source": "Invented example data" }

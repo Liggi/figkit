@@ -1,0 +1,57 @@
+{
+  "name": "figkit",
+  "version": "0.1.0",
+  "description": "Explanatory figures for agents and people: write a little HTML or a chart spec, get a laid-out PNG and a list of what is wrong with it.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "figkit": "bin/fig.mjs"
+  },
+  "files": [
+    "bin/",
+    "runtime/",
+    "viz/",
+    "dist/",
+    "examples/",
+    "GUIDE.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "node viz/build.mjs",
+    "prepack": "node viz/build.mjs",
+    "examples": "node scripts/render-examples.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "figure",
+    "diagram",
+    "chart",
+    "png",
+    "observable-plot",
+    "playwright",
+    "agents"
+  ],
+  "dependencies": {
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/geist-sans": "^5.3.0",
+    "@fontsource/newsreader": "^5.3.0",
+    "@observablehq/plot": "^0.6.19",
+    "d3": "^7.9.2",
+    "playwright-core": "^1.65.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "author": "Jason Liggi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Liggi/figkit.git"
+  },
+  "homepage": "https://github.com/Liggi/figkit#readme",
+  "bugs": {
+    "url": "https://github.com/Liggi/figkit/issues"
+  }
+}

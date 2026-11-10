@@ -1,0 +1,25 @@
+<main class="fig paper">
+  <header>
+    <h1>The shop takes about 50 orders a day, <em>down from a 131 peak</em></h1>
+    <p class="read">Orders per day, 2 February to 15 March 2026.</p>
+  </header>
+  <div id="chart"></div>
+  <script>
+    const raw = "2026-02-02|44 2026-02-03|131 2026-02-04|78 2026-02-05|46 2026-02-06|54 2026-02-07|35 2026-02-08|36 2026-02-09|60 2026-02-10|51 2026-02-11|37 2026-02-12|45 2026-02-13|52 2026-02-14|35 2026-02-15|63 2026-02-16|50 2026-02-17|40 2026-02-18|35 2026-02-19|36 2026-02-20|47 2026-02-21|47 2026-02-22|10 2026-02-23|15 2026-02-24|10 2026-02-25|25 2026-02-26|21 2026-02-27|10 2026-02-28|60 2026-03-01|52 2026-03-02|37 2026-03-03|64 2026-03-04|41 2026-03-05|54 2026-03-06|54 2026-03-07|52 2026-03-08|64 2026-03-09|35 2026-03-10|52 2026-03-11|52 2026-03-12|46 2026-03-13|35 2026-03-14|41 2026-03-15|35";
+    const days = raw.split(" ").map((s) => { const [d, n] = s.split("|"); return { day: new Date(d), n: +n }; });
+    const peak = days.reduce((m, d) => (d.n > m.n ? d : m));
+    fig.plot("#chart", ({ Plot, theme }) => ({
+      height: 380, marginLeft: 44, marginRight: 30, marginTop: 30,
+      x: { label: null, ticks: 6 }, y: { label: null, grid: true, ticks: 4, domain: [0, 150] },
+      marks: [
+        Plot.rectY([0], { x1: () => new Date("2026-02-21T12:00"), x2: () => new Date("2026-02-27T12:00"), y1: 0, y2: 150, fill: theme.second, fillOpacity: 0.12 }),
+        Plot.lineY(days, { x: "day", y: "n", stroke: theme.soft, strokeWidth: 2.5 }),
+        Plot.dot([peak], { x: "day", y: "n", fill: theme.accent, r: 6 }),
+        Plot.text([peak], { x: "day", y: "n", text: () => "131 on 3 Feb", dx: 12, textAnchor: "start", fill: theme.accent, fontWeight: 600, fontSize: 17 }),
+        Plot.text([{ day: new Date("2026-02-24T12:00"), n: 92 }], { x: "day", y: "n", text: () => "10 to 25 a day,\nwhile the site was down", fill: theme.second, fontWeight: 600, fontSize: 17, lineHeight: 1.2 }),
+        Plot.ruleY([0], { stroke: theme.line }),
+      ],
+    }));
+  </script>
+  <footer><p>Invented data, for illustration.</p></footer>
+</main>

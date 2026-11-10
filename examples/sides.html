@@ -1,0 +1,35 @@
+<main class="fig">
+  <header>
+    <h1>Three catalogue copies today, <em>one shared copy proposed</em></h1>
+  </header>
+  <div class="grid sides" style="--cols: 2; column-gap: 110px">
+    <div class="col" style="gap: 22px">
+      <span class="lane-title" style="font-size: var(--read); color: var(--ink)">Now: 12 GB</span>
+      <div class="row tight">
+        <div class="node grow" id="k1"><h3>Copy</h3><p>4 GB</p></div>
+        <div class="node grow" id="k2"><h3>Copy</h3><p>4 GB</p></div>
+        <div class="node grow" id="k3"><h3>Copy</h3><p>4 GB</p></div>
+      </div>
+      <div class="row tight" style="margin-top: 40px">
+        <div class="node bare grow tc" id="w1"><h3>Worker 1</h3></div>
+        <div class="node bare grow tc" id="w2"><h3>Worker 2</h3></div>
+        <div class="node bare grow tc" id="w3"><h3>Worker 3</h3></div>
+      </div>
+    </div>
+    <div class="col" style="gap: 22px">
+      <span class="lane-title t-accent" style="font-size: var(--read)">Proposed: 4 GB</span>
+      <div class="row"><div class="node accent fill grow" id="sh"><h3>One shared copy</h3><p>4 GB</p></div></div>
+      <div class="row tight" style="margin-top: 40px">
+        <div class="node bare grow tc" id="v1"><h3>Worker 1</h3></div>
+        <div class="node bare grow tc" id="v2"><h3>Worker 2</h3></div>
+        <div class="node bare grow tc" id="v3"><h3>Worker 3</h3></div>
+      </div>
+    </div>
+  </div>
+  <fig-arrow from="k1" to="w1"></fig-arrow>
+  <fig-arrow from="k2" to="w2"></fig-arrow>
+  <fig-arrow from="k3" to="w3"></fig-arrow>
+  <fig-arrow from="sh" to="v1" accent></fig-arrow>
+  <fig-arrow from="sh" to="v2" accent></fig-arrow>
+  <fig-arrow from="sh" to="v3" accent></fig-arrow>
+</main>

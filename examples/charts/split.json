@@ -1,0 +1,10 @@
+{ "type": "split", "title": "Search brings in most October trial sign-ups",
+  "note": "By where the visitor came from",
+  "unit": "%",
+  "parts": [
+    { "label": "Search", "value": 58, "tone": "accent" },
+    { "label": "Referral", "value": 27 },
+    { "label": "Ads", "value": 11 },
+    { "label": "Other", "value": 4 }
+  ],
+  "source": "Invented example data" }

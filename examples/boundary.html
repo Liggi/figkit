@@ -1,0 +1,25 @@
+<main class="fig">
+  <header>
+    <h1>The nightly export can't email customers: <em>it never sees their address</em></h1>
+    <p class="read"><b class="t-second">Blue</b> knows the email address. <b class="t-accent">Orange</b> is where it is lost.</p>
+  </header>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 190px; row-gap: 84px">
+    <div class="group" style="row-gap: 56px">
+      <span class="label">Shop front</span>
+      <div class="node second tint" id="pub"><h3>Email address</h3><p>Who the customer is</p></div>
+      <div class="node second tint" id="live"><h3>Order page</h3></div>
+    </div>
+    <div class="group" style="row-gap: 56px">
+      <span class="label">Warehouse systems</span>
+      <div class="node" id="state"><h3>Customer key</h3><p>No address inside</p></div>
+      <div class="node" id="batch"><h3>Nightly export</h3></div>
+    </div>
+    <div class="node second fill" id="seg" style="grid-column: 1 / -1"><h3>Delivery email</h3><p>Sent to the address</p></div>
+  </div>
+  <fig-arrow from="pub" to="state" accent weight="4" label="one-way hash"></fig-arrow>
+  <fig-arrow from="pub" to="live" second></fig-arrow>
+  <fig-arrow from="state" to="batch"></fig-arrow>
+  <fig-arrow from="live" to="seg" second label="can send"></fig-arrow>
+  <fig-arrow from="batch" to="seg" accent dashed blocked label="no address to send to"></fig-arrow>
+  <p class="takeaway">So delivery emails go from the order page.</p>
+</main>

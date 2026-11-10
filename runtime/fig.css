@@ -1,0 +1,182 @@
+/* figkit theme and primitives. Authors write HTML inside <main class="fig">; everything here is optional vocabulary. */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: transparent; }
+
+.fig {
+  /* ink theme (dark): the default, for a dark chat */
+  --paper: #2d3142; --panel: #252938; --ink: #f5f5f5; --muted: #c3c6cf; --soft: #949eb2; --line: #8d95ad; --hair: rgba(245,245,245,.16);
+  --accent: #f08a59; --second: #739fdf; --good: #6fc392; --bad: #ef6b73;
+  --on-fill: #1d2030;
+  --sans: 'Geist Sans', 'Geist', system-ui, sans-serif;
+  --serif: 'Newsreader', Georgia, serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  /* glance density: one point, reads inline on a phone */
+  --w: 960px; --pad: 44px; --gap: 16px; --gap-arrow: 64px;
+  --title: 50px; --read: 22px; --h: 22px; --body: 18px; --small: 16px; --num: 46px;
+
+  position: relative; width: var(--w); padding: var(--pad); background: var(--paper); color: var(--ink);
+  font-family: var(--sans); font-size: var(--body); line-height: 1.35; -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.fig.detail {
+  /* detail density: a map to open full screen and read */
+  --w: 1360px; --pad: 48px; --gap: 16px; --gap-arrow: 60px;
+  --title: 50px; --read: 20px; --h: 19px; --body: 16px; --small: 14px;
+}
+.fig.paper {
+  /* light theme: docs, Slack, Notion */
+  --paper: #faf8f3; --panel: #ffffff; --ink: #1d2130; --muted: #4c5262; --soft: #7a8092; --line: #8a90a0; --hair: rgba(29,33,48,.16);
+  --accent: #cf5a23; --second: #2f6bc4; --good: #2f8f5b; --bad: #c9414a; --on-fill: #ffffff;
+}
+.fig[style*="--w"] { width: var(--w); }
+.fig.chart {
+  /* a chart from a spec: narrower, so it reads inline on a phone; the chart, not the title, is the largest thing */
+  --w: 720px; --title: 36px; --read: 22px; --body: 22px; --small: 21px;
+}
+
+.fig.phone {
+  /* the phone layout of a figure with sides: narrow, so its text stays readable inline; sides stack */
+  --w: 560px; --pad: 30px; --title: 40px;
+}
+.fig.phone .sides { display: flex; flex-direction: column; row-gap: 56px; }
+.fig.phone .sides > * { flex: 0 0 auto; width: 100%; }
+
+/* ---------- header and footer ---------- */
+.fig > header { display: flex; flex-direction: column; gap: 10px; }
+.fig h1 { font-family: var(--serif); font-weight: 400; font-size: var(--title); line-height: 1.06; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.fig h1 em { color: var(--accent); }
+.fig .read { font-size: var(--read); color: var(--muted); margin: 0; text-wrap: pretty; }
+.fig > footer { font-size: var(--small); color: var(--soft); border-top: 1px solid var(--hair); padding-top: 14px; }
+.fig > footer p { margin: 0 0 4px; }
+.fig .takeaway { font-family: var(--serif); font-size: calc(var(--read) * 1.3); color: var(--ink); margin: 0; }
+
+/* ---------- text ---------- */
+.fig h2 { font-size: var(--h); font-weight: 600; margin: 0; }
+.fig h3 { font-size: var(--h); font-weight: 600; margin: 0; line-height: 1.2; }
+.fig p { margin: 0; }
+.fig .note { font-size: var(--small); color: var(--muted); max-width: 34ch; }
+.fig .num { font-family: var(--serif); font-size: var(--num); line-height: 1; letter-spacing: -.01em; }
+.fig .tag { font-family: var(--mono); font-size: var(--small); color: var(--soft); }
+.fig code { font-family: var(--mono); font-size: .92em; }
+.fig .t-accent { color: var(--accent); } .fig .t-second { color: var(--second); }
+.fig .t-good { color: var(--good); } .fig .t-bad { color: var(--bad); }
+.fig .t-muted { color: var(--muted); } .fig .t-soft { color: var(--soft); }
+.fig b, .fig strong { font-weight: 600; }
+
+/* ---------- layout ---------- */
+.fig .row { display: flex; flex-direction: row; gap: var(--gap); align-items: stretch; }
+.fig .col { display: flex; flex-direction: column; gap: var(--gap); }
+.fig .grid { display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: var(--gap); }
+.fig .arrows { gap: var(--gap-arrow); }        /* a row or column whose children are joined by arrows */
+.fig .wide { gap: calc(var(--gap-arrow) * 1.6); }
+.fig .tight { gap: 8px; }
+.fig .grow { flex: 1 1 0; min-width: 0; }
+.fig .fit { flex: 0 0 auto; }
+.fig .middle { align-items: center; } .fig .top { align-items: flex-start; } .fig .bottom { align-items: flex-end; }
+.fig .center { justify-content: center; } .fig .between { justify-content: space-between; }
+.fig .tc { text-align: center; } .fig .tr { text-align: right; }
+
+/* ---------- nodes ---------- */
+.fig .node {
+  --tone: var(--line);
+  background: var(--panel); border: 1.5px solid var(--tone); border-radius: 10px; padding: 14px 18px;
+  display: flex; flex-direction: column; gap: 4px; min-width: 0; position: relative;
+}
+.fig .node > p { color: var(--muted); font-size: var(--small); }
+.fig .node > .num + h3 { margin-top: 6px; }
+.fig .accent { --tone: var(--accent); } .fig .second { --tone: var(--second); }
+.fig .good { --tone: var(--good); } .fig .bad { --tone: var(--bad); }
+.fig .node.accent > .tag, .fig .node.second > .tag, .fig .node.good > .tag, .fig .node.bad > .tag { color: var(--tone); }
+.fig .node.fill { background: var(--tone); border-color: var(--tone); color: var(--on-fill); }
+.fig .node.fill > p { color: var(--on-fill); opacity: .82; }
+.fig .node.fill:not(.accent):not(.second):not(.good):not(.bad) { --tone: var(--ink); color: var(--paper); }
+.fig .node.fill:not(.accent):not(.second):not(.good):not(.bad) > p { color: var(--paper); }
+.fig .node.tint { background: color-mix(in srgb, var(--tone) 18%, var(--panel)); }
+.fig .node.quiet { background: transparent; border-color: var(--hair); }
+.fig .node.dashed { border-style: dashed; background: transparent; }
+.fig .node.bare { background: transparent; border-color: transparent; padding: 0; }
+.fig .node.pill { border-radius: 999px; padding: 12px 26px; align-items: center; text-align: center; }
+.fig .step {
+  position: absolute; top: -13px; right: -13px; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--ink); color: var(--paper); font-size: 15px; font-weight: 600; display: grid; place-items: center;
+}
+
+/* a decision: diamond, text centred */
+.fig .decision {
+  --tone: var(--ink); position: relative; isolation: isolate; display: grid; place-items: center; text-align: center;
+  padding: 2.9em 0; min-width: 300px; align-self: center; font-weight: 600; font-size: var(--h); line-height: 1.25;
+}
+.fig .decision > * { max-width: 56%; }
+.fig .decision::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--tone); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.fig .decision::after { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--panel); clip-path: polygon(50% 3px, calc(100% - 5px) 50%, 50% calc(100% - 3px), 5px 50%); }
+
+/* a group: a light container with a label on its top edge */
+.fig .group { position: relative; border: 1px dashed var(--hair); border-radius: 12px; padding: 26px 18px 18px; display: flex; flex-direction: column; gap: var(--gap); }
+.fig .group > .label { position: absolute; top: -0.72em; left: 14px; background: var(--paper); padding: 0 8px; font-size: var(--small); font-weight: 600; color: var(--muted); }
+.fig .lane-title { font-size: var(--small); font-weight: 600; color: var(--muted); letter-spacing: .01em; }
+.fig hr { border: 0; border-top: 1px solid var(--hair); margin: 0; width: 100%; }
+.fig .divide { border-left: 1px solid var(--hair); align-self: stretch; }
+
+/* ---------- arrows (drawn by fig.js) ---------- */
+fig-arrow { display: none; }
+.fig > svg.fig-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.fig .fig-wire-label {
+  position: absolute; transform: translate(-50%, -50%); background: var(--paper); padding: 1px 8px; border-radius: 4px;
+  font-size: var(--small); font-weight: 600; white-space: nowrap; line-height: 1.3;
+}
+
+/* ---------- split bar: parts of a whole ---------- */
+fig-split { display: flex; flex-direction: column; gap: 10px; }
+fig-split .fs-bar { display: flex; gap: 3px; height: 58px; }
+fig-split .fs-seg { --tone: var(--soft); background: var(--tone); color: var(--on-fill); min-width: 4px; display: flex; align-items: center; gap: 10px; padding: 0 14px; overflow: hidden; white-space: nowrap; }
+fig-split .fs-seg:first-child { border-radius: 8px 0 0 8px; } fig-split .fs-seg:last-child { border-radius: 0 8px 8px 0; }
+fig-split .fs-seg.fs-out { padding: 0; }
+fig-split .fs-seg.fs-out > * { display: none; }
+fig-split .fs-seg b { font-family: var(--serif); font-weight: 400; font-size: calc(var(--num) * .66); }
+fig-split .fs-seg span { font-size: var(--small); font-weight: 600; }
+fig-split .fs-rest { font-size: var(--small); color: var(--muted); }
+fig-split .fs-rest > span { font-weight: 600; }
+fig-split .fs-rest b { color: var(--ink); font-family: var(--serif); font-weight: 400; font-size: 1.3em; }
+.fig.paper fig-split .fs-seg:not(.accent):not(.second):not(.good):not(.bad) { --tone: #c9cdd6; color: var(--ink); }
+
+/* ---------- before and after: one measure that changed ---------- */
+fig-change { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 28px; row-gap: 14px; align-items: center; }
+fig-change .fc-side { display: flex; flex-direction: column; gap: 10px; }
+fig-change .fc-when { font-size: var(--small); font-weight: 600; color: var(--muted); }
+fig-change .fc-num { font-family: var(--serif); font-weight: 400; font-size: calc(var(--num) * 1.5); line-height: 1; letter-spacing: -.01em; color: var(--ink); }
+fig-change .fc-bar { height: 14px; min-width: 3px; background: var(--soft); border-radius: 3px; }
+fig-change .before .fc-num { color: var(--muted); }
+fig-change .after .fc-num { color: var(--tone); }
+fig-change .after .fc-bar { background: var(--tone); }
+fig-change .fc-arrow { color: var(--soft); display: flex; }
+
+/* ---------- bars: compare a few numbers ---------- */
+fig-bars { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 16px; row-gap: 10px; align-items: center; }
+fig-bars .fb-label { font-size: var(--body); }
+fig-bars .fb-track { display: flex; align-items: center; gap: 10px; min-width: 0; }
+fig-bars .fb-bar { --tone: var(--soft); height: 26px; background: var(--tone); border-radius: 3px; min-width: 3px; flex: 0 0 auto; }
+fig-bars .fb-val { font-family: var(--serif); font-size: 1.3em; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+fig-bars .fb-val.lead { color: var(--tone); }
+fig-bars .fb-sub { font-weight: 400; color: var(--soft); font-size: var(--small); margin-left: 6px; }
+
+/* ---------- charts (Observable Plot via fig.plot) ---------- */
+.fig .chart { min-width: 0; }
+.fig .fd-key { display: flex; gap: 28px; margin: 0 0 18px; font-size: var(--small); font-weight: 600; color: var(--soft); }
+.fig .fd-key span { display: inline-flex; align-items: center; gap: 8px; }
+.fig .fd-key i { display: inline-block; width: 13px; height: 13px; border-radius: 50%; background: var(--soft); }
+.fig .fd-key .fd-to i { width: 0; height: 0; border-radius: 0; background: none; border-left: 13px solid currentColor; border-top: 7.5px solid transparent; border-bottom: 7.5px solid transparent; }
+.fig .fd-key .fd-to.back i { transform: scaleX(-1); }
+.fig.chart > footer { border-top: 0; padding-top: 0; }
+.fig .chart svg { display: block; overflow: visible; }
+.fig .chart figure { margin: 0; }
+
+/* ---------- screenshots with call-outs ---------- */
+.fig .shot { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid var(--hair); line-height: 0; }
+.fig .shot img { width: 100%; display: block; }
+.fig .mark { position: absolute; border: 2.5px solid var(--accent); border-radius: 6px; }
+.fig .group.flush { margin-inline: -19px; }
+.fig .fig .t-accent, .fig .t-accent.t-accent { color: var(--accent); }
+.fig .t-second.t-second { color: var(--second); }
+.fig .t-good.t-good { color: var(--good); } .fig .t-bad.t-bad { color: var(--bad); }
+.fig .decision:not(.accent):not(.second):not(.good):not(.bad) { --tone: var(--line); }

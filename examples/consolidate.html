@@ -1,0 +1,29 @@
+<main class="fig">
+  <header>
+    <h1>Shop settings are scattered. <em>The goal is one file.</em></h1>
+    <p class="read">Same behaviour at first, then changed in one place.</p>
+  </header>
+  <div class="row wide">
+    <div class="col grow" id="today" style="gap: 10px">
+      <span class="lane-title">Today: five places</span>
+      <div class="node"><h3>Prices</h3><p>Spreadsheet</p></div>
+      <div class="node"><h3>Delivery zones</h3><p>Database table</p></div>
+      <div class="node"><h3>Opening hours</h3><p>Admin page</p></div>
+      <div class="node"><h3>Discount rules</h3><p>Code</p></div>
+      <div class="node"><h3>Email wording</h3><p>Templates folder</p></div>
+    </div>
+    <div class="col grow" style="gap: 10px">
+      <span class="lane-title t-accent">Proposed: one file per shop</span>
+      <div class="node accent grow" id="agent" style="gap: 14px; padding: 26px 28px">
+        <span class="num">shop.yaml</span>
+        <h3>What each item costs</h3>
+        <h3>Where it delivers</h3>
+        <h3>When it is open</h3>
+        <h3>Which discounts apply</h3>
+        <h3>What the emails say</h3>
+        <p style="margin-top: auto">Reviewed like code</p>
+      </div>
+    </div>
+  </div>
+  <fig-arrow from="today" to="agent" accent weight="3"></fig-arrow>
+</main>

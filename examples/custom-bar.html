@@ -1,0 +1,25 @@
+<style>
+  .bar { display: flex; gap: 3px; height: 96px; }
+  .seg { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 16px; background: var(--soft); color: var(--on-fill); min-width: 0; }
+  .seg b { font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1; }
+  .seg span { font-size: var(--small); font-weight: 600; white-space: nowrap; }
+  .seg:first-child { border-radius: 8px 0 0 8px; } .seg:last-child { border-radius: 0 8px 8px 0; }
+</style>
+<main class="fig">
+  <header>
+    <h1><em>A third to a half</em> of returns give a reason, not 90%</h1>
+    <p class="read">612 returned orders. Did the customer say why on the returns form?</p>
+  </header>
+  <div style="position: relative; padding-top: 62px">
+    <span style="position: absolute; left: 0; top: 0; font-weight: 600">47% if the vague ones count</span>
+    <div style="position: absolute; left: 0; top: 34px; width: 47%; height: 16px; border: 2px solid var(--ink); border-bottom: 0; border-radius: 6px 6px 0 0"></div>
+    <div style="position: absolute; left: 90%; top: 0; height: 170px; border-left: 2px dashed var(--ink)"></div>
+    <span style="position: absolute; right: calc(10% + 12px); top: 0; font-weight: 600">90% target</span>
+    <div class="bar">
+      <div class="seg" style="flex: 33; background: var(--accent)"><b>33%</b><span>give a reason</span></div>
+      <div class="seg" style="flex: 14; background: color-mix(in srgb, var(--accent) 45%, var(--soft))"><b>14%</b><span>vague</span></div>
+      <div class="seg" style="flex: 53"><b>53%</b><span>leave it blank</span></div>
+    </div>
+  </div>
+  <footer><p>Invented data, for illustration.</p></footer>
+</main>
