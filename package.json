@@ -1,6 +1,6 @@
 {
   "name": "@liggi/figkit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Explanatory figures for agents and people: write a little HTML or a chart spec, get a laid-out PNG and a list of what is wrong with it.",
   "license": "MIT",
   "type": "module",

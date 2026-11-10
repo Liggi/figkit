@@ -39,7 +39,7 @@ if (/\.json$/i.test(src)) {
     console.log(`This chart spec has ${spec.problems.length} problem${spec.problems.length === 1 ? '' : 's'}:\n${spec.problems.map((p) => `  - ${p}`).join('\n')}`);
     process.exit(1);
   }
-  body = `<main class="fig chart"><script type="application/json" id="figkit-spec">${JSON.stringify(spec.spec).replace(/</g, '\\u003c')}</script></main>`;
+  body = `<main class="fig ${spec.spec.type === 'entities' ? 'entities-fig' : 'chart'}"><script type="application/json" id="figkit-spec">${JSON.stringify(spec.spec).replace(/</g, '\\u003c')}</script></main>`;
 } else if (!/class="[^"]*\bfig\b/.test(body)) body = `<main class="fig">\n${body}\n</main>`;
 await ensureBuilt();
 
@@ -93,7 +93,7 @@ try {
     if (phone) await page.addInitScript(() => { window.__figPhone = true; });
     await page.goto(pathToFileURL(wrapped).href);
     await page.waitForFunction('window.__figDone === true', null, { timeout: 30000 });
-    const r = await page.evaluate(() => ({ problems: window.fig.problems, info: window.fig.info, sides: !!document.querySelector('.fig .sides') }));
+    const r = await page.evaluate(() => ({ problems: window.fig.problems, info: window.fig.info, sides: !!document.querySelector('.fig .sides, .fig .entities'), entities: !!document.querySelector('.fig .entities') }));
     await page.locator('.fig').first().screenshot({ path: shot });
     await page.close();
     return { ...r, problems: [...errors.map((e) => `Script error: ${e}`), ...r.problems] };
@@ -108,7 +108,7 @@ try {
 
   const { info } = desk;
   const lines = [`Figure:       ${png}  (${info.width * 2}×${info.height * 2})`];
-  if (mob) lines.push(`Phone layout: ${phonePng}  (${mob.info.width * 2}×${mob.info.height * 2}), the sides stacked, for a viewer to show on a phone`);
+  if (mob) lines.push(`Phone layout: ${phonePng}  (${mob.info.width * 2}×${mob.info.height * 2}), ${desk.entities ? 'the records in two columns' : 'the sides stacked'}, for a viewer to show on a phone`);
   lines.push(`Phone inline: ${inline}  (preview only)`);
   const ph = (mob ?? desk).info.phone;
   const sizes = [['the title', ph?.title], ['headings', ph?.heading], ['body', ph?.body]].filter(([, v]) => v != null).map(([k, v]) => `${k} ${v}px`);

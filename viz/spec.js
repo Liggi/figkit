@@ -84,10 +84,37 @@ export const SeriesSpec = z.object({
   zero: z.boolean().optional(),
 }).strict();
 
-export const Spec = z.discriminatedUnion('type', [SplitSpec, BarsSpec, BeforeAfterSpec, DumbbellSpec, SeriesSpec]);
-export const TYPES = { split: SplitSpec, bars: BarsSpec, 'before-after': BeforeAfterSpec, dumbbell: DumbbellSpec, series: SeriesSpec };
+const slug = z.string({ error: 'needs an id, e.g. "order"' }).regex(/^[a-z][a-z0-9-]{0,23}$/, 'ids are short lowercase words, e.g. "order" or "order-line"');
 
-const items = (s) => s.parts ?? s.bars ?? s.rows ?? (s.after ? [s.after] : []);
+/**
+ * What the things are and which points at which: records, and references from one record to another. A reference is
+ * a pointer one record holds (a foreign key, an id field), never a step in the order work happens.
+ */
+export const EntitiesSpec = z.object({
+  type: z.literal('entities'),
+  title,
+  note: common.note,
+  source: common.source,
+  records: z.array(z.object({
+    id: slug,
+    name: label.max(32, 'keep record names to 32 characters'),
+    table: z.never({ error: 'no table: name the record in words; if the table name matters to the reader, put it in fields' }).optional(),
+    fields: z.array(z.string().trim().min(1).max(36, 'keep each field to 36 characters')).max(4, 'at most 4 fields: the ones that explain the picture').optional(),
+    tone: z.literal('accent', { error: 'tone: only "accent", on the one record to notice' }).optional(),
+  }).strict()).min(2, 'at least 2 records').max(5, 'at most 5 records; more is two figures (the core, then one corner of it), not one'),
+  refs: z.array(z.object({
+    from: slug,
+    to: slug,
+    field: z.never({ error: 'no field: the line is the reference, so its column is not written out' }).optional(),
+    count: z.enum(['many', 'one'], { error: 'count: "many" or "one": how many "from" records can point at one "to" record' }).default('many'),
+    optional: z.boolean().optional(),
+  }).strict()).min(1, 'at least 1 reference').max(8, 'at most 8 references; more is two figures, not a reference left out'),
+}).strict();
+
+export const Spec = z.discriminatedUnion('type', [SplitSpec, BarsSpec, BeforeAfterSpec, DumbbellSpec, SeriesSpec, EntitiesSpec]);
+export const TYPES = { split: SplitSpec, bars: BarsSpec, 'before-after': BeforeAfterSpec, dumbbell: DumbbellSpec, series: SeriesSpec, entities: EntitiesSpec };
+
+const items = (s) => s.parts ?? s.bars ?? s.rows ?? s.records ?? (s.after ? [s.after] : []);
 const kind = (v) => (typeof v === 'number' ? 'number' : 'date');
 
 /** Rules that span fields: x values of one kind, in order, and a mark that is one of the points. */
@@ -102,6 +129,24 @@ function crossChecks(s) {
     const at = (x) => (typeof x === 'number' ? x : Date.parse(x));
     for (let i = 1; i < s.points.length; i++) if (at(s.points[i].x) <= at(s.points[i - 1].x)) return [`points[${i}].x: points must be in order of x, each later than the one before`];
     if (!s.points.some((p) => at(p.x) === at(s.mark.x))) return [`mark.x: must be the x of one of the points, not ${JSON.stringify(s.mark.x)}`];
+  }
+  if (s.type === 'entities') {
+    const ids = s.records.map((r) => r.id);
+    const dup = ids.find((id, i) => ids.indexOf(id) !== i);
+    if (dup) return [`records: two records have the id "${dup}"`];
+    const out = [];
+    const pairs = new Set();
+    s.refs.forEach((r, i) => {
+      for (const end of ['from', 'to']) if (!ids.includes(r[end])) out.push(`refs[${i}].${end}: no record has the id "${r[end]}"; the ids are ${ids.map((x) => `"${x}"`).join(', ')}`);
+      if (r.from === r.to) out.push(`refs[${i}]: a record pointing at itself; say it in its fields instead`);
+      const key = r.from + '>' + r.to;
+      if (pairs.has(key)) out.push(`refs[${i}]: a second reference from "${r.from}" to "${r.to}"; make it one reference`);
+      pairs.add(key);
+    });
+    if (s.records.filter((r) => r.tone).length > 1) out.push('records: accent at most one record, the one to notice');
+    const loose = ids.filter((id) => !s.refs.some((r) => r.from === id || r.to === id));
+    if (loose.length) out.push(`records: ${loose.map((x) => `"${x}"`).join(', ')} ${loose.length === 1 ? 'is' : 'are'} not in any reference; leave ${loose.length === 1 ? 'it' : 'them'} out or add the reference`);
+    return out;
   }
   return [];
 }

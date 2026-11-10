@@ -28,6 +28,11 @@ the images and look, then embed the PNG: `![what it shows](/abs/path.png)`.
 A question about structure ("what are the entities?", "where does X live?", "how do these relate?", "what loads
 what?", "walk me through it") is answered with a picture first, not with numbered steps.
 
+- "What are the entities and how do they relate?" is an `entities` spec (below), not boxes and arrows in HTML. It
+  draws references: which record holds a pointer to which. The order work happens in (approve, then label, then
+  train) is not a reference; it goes in prose, a list or a separate flow. A record that creates others still points
+  at them: draw the pointers it holds, not the steps it runs. Draw every pointer a record holds, even when another
+  line reaches the same record by a longer way; leaving one out says the column is not there.
 - Each figure is a plain `fig` with at most 5 boxes and no `group`. More than that is two or three figures in a row,
   not one map: what exists, then one case through it, then what changes. A process or machine the code runs in is a
   `tag` on the box, not a box around it. Use `fig detail` only when the reader asked for the whole map.
@@ -39,9 +44,9 @@ what?", "walk me through it") is answered with a picture first, not with numbere
   three arrows; one shared copy is one box fanning out to the three. "How many" must be visible without reading.
 - Name each thing once, and use that name in the title, the boxes and your prose.
 
-## Charts from a spec
+## Charts and entities from a spec
 
-When the whole figure is one chart of a type below, write a JSON spec instead of HTML. You give the data; figkit
+When the whole figure is one chart or one entities picture of a type below, write a JSON spec instead of HTML. You give the data; figkit
 does the layout, colours and labels. Use HTML (the rest of this guide) for anything else, including a chart that sits
 beside boxes or arrows.
 
@@ -100,6 +105,30 @@ mark's `x` must be one of them. The y axis starts at zero unless `"zero": false`
   "mark": { "x": "2026-10-14", "label": "212, launch day" } }
 ```
 
+`entities`: what the things are and which points at which. 2 to 5 `records`, each with an `id` you use in `refs`,
+a `name` in the reader's words, and up to 4 `fields` that say what it holds (put a table name here only if the reader
+needs it). Each of up to 8 `refs` is a pointer the `from` record holds to the `to` record: `count` is how many `from`
+records can point at one `to` (`"many"`, the default, or `"one"`), and `"optional": true` when the pointer may be
+empty. figkit places the records (what is pointed at sits above what points at it) and draws each reference as a line
+joined at the records' names: a dot on the record named, and on the holder a crow's foot when many can point at one or
+a short bar when only one can; dashed when it may be empty; never an arrow, never a key. It draws a two-column layout
+for a phone. Every record must be in a reference. Accent at most one record: the one the title is about. The title
+claims only what the lines show; if it says "everything names X", every record has a line to X. Names and fields are
+in plain words, not in-house terms or button labels.
+
+```json
+{ "type": "entities", "title": "Every order line names one product and one order",
+  "records": [ { "id": "order", "name": "Order", "fields": ["placed at"] },
+               { "id": "line", "name": "Order line", "fields": ["quantity"], "tone": "accent" },
+               { "id": "product", "name": "Product", "fields": ["sku"] },
+               { "id": "payment", "name": "Payment" } ],
+  "refs": [ { "from": "line", "to": "order" },
+            { "from": "line", "to": "product" },
+            { "from": "payment", "to": "order", "count": "one", "optional": true } ] }
+```
+
+More than 5 records is two figures: the core records, then one corner of it with the core record it hangs off.
+
 Flows (boxes and arrows) have no spec: write them in HTML, below.
 
 - `title` (required) is the point, 14 words at most. `note` is the reading line under it; `source` a footer.
@@ -123,7 +152,7 @@ Flows (boxes and arrows) have no spec: write them in HTML, below.
 ```
 
 - In the `<h1>`, `<em>` turns the words accent-coloured italic and `<br>` sets a line break.
-- `fig` is a glance figure, 960 wide: one point, big type, reads inline on a phone. At most 8 boxes, 8 arrows and 70 words.
+- `fig` is a glance figure, 960 wide: one point, big type, reads inline on a phone. At most 5 boxes, 8 arrows and 70 words.
 - `fig detail` is 1360 wide, for a flow or map the reader asked for and opens full screen; to explain a system, use
   several `fig` figures instead (see Explaining a system). At most 18 boxes, 18 arrows and 190 words.
   Widen it with `style="--w: 1560px"` only when a row will not fit.
@@ -196,7 +225,8 @@ never nudge with margins.
 
 Put them anywhere inside the figure; `from` and `to` are element ids. Any element can be an end: a node, a group, a
 `mark` on a screenshot, a `<span>` of text. Arrows keep clear of boxes and loose text, and arrows sharing an end and
-a colour share a trunk.
+a colour share a trunk. When a label has no free place, figkit opens the gap between the two boxes (or widens the
+figure a little) and draws again; keep labels to a few words so it rarely has to.
 
 - colour: `accent`, `second`, `good`, `bad`; `dashed`; `weight="3"`; `both` for two heads; `head="none"`
 - `blocked`: a route that does not exist. The line stops short of the target at a cross, with no arrowhead

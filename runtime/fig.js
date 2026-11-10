@@ -63,6 +63,9 @@
   const DIRS = { top: [0, -1], right: [1, 0], bottom: [0, 1], left: [-1, 0] };
   function ports(el, r, other, allowed, at) {
     const diamond = el.classList.contains('decision');
+    // A record is joined at the side of its name, never beside a field, which a line there would seem to be.
+    const h3 = el.classList.contains('record') && el.querySelector(':scope > h3');
+    const head = h3 && (() => { const t = rectOf(h3), line = Math.min(t.h, parseFloat(getComputedStyle(h3).lineHeight) || t.h); return { mid: t.y + line / 2, lo: r.y + 12, hi: Math.max(t.y + t.h + 6, r.y + 12) }; })();
     const out = [];
     for (const s of allowed) {
       const d = DIRS[s];
@@ -76,10 +79,20 @@
         const lo = Math.max(r.y, other.y), hi = Math.min(r.y + r.h, other.y + other.h);
         y = !diamond && hi - lo >= 24 ? (lo + hi) / 2 : r.y + r.h / 2;
         if (at != null && !diamond) y = r.y + r.h * at;
+        if (head) y = Math.min((head.lo + head.hi) / 2, head.mid + 4); // the first line of the name, so a wrapped name joins level with its row
         x = s === 'left' ? r.x : r.x + r.w;
       }
       x = Math.round(x); y = Math.round(y);
-      out.push({ s, d, x, y, sx: x + d[0] * M, sy: y + d[1] * M });
+      out.push({ s, d, x, y, sx: x + d[0] * M, sy: y + d[1] * M, off: 0 });
+      // Spares beside the chosen point, for when another line already ends there.
+      if (at != null || diamond) continue;
+      for (const k of [-1, 1, -2, 2]) {
+        const band = head && d[0] !== 0;
+        const v = (d[0] === 0 ? x : y) + k * (band ? 18 : 26), lo = band ? head.lo : (d[0] === 0 ? r.x : r.y) + 14, hi = band ? head.hi : (d[0] === 0 ? r.x + r.w : r.y + r.h) - 14;
+        if (v < lo || v > hi) continue;
+        const px = d[0] === 0 ? v : x, py = d[0] === 0 ? y : v;
+        out.push({ s, d, x: px, y: py, sx: px + d[0] * M, sy: py + d[1] * M, off: Math.abs(k) });
+      }
     }
     return out;
   }
@@ -99,12 +112,16 @@
       return !others.some((r) => Math.min(seg.x + seg.w, r.x + r.w) > Math.max(seg.x, r.x) && Math.min(seg.y + seg.h, r.y + r.h) > Math.max(seg.y, r.y));
     };
     const pa = ports(A.el, A.r, B.r, arrow.fromSides, arrow.fromAt), pb = ports(B.el, B.r, A.r, arrow.toSides, arrow.toAt);
+    // Arrows from one box share a trunk, and so do arrows into one box; references only share the end they land on.
+    const bus = (u) => ((u.from === arrow.from && !arrow.ref) || u.to === arrow.to) && u.tone === arrow.tone;
+    // A point where another line already starts or ends costs a lot; a spare beside it costs a little.
+    const portCost = (p) => p.off * 18 + (used.some((u) => !bus(u) && ((Math.abs(u.x1 - p.x) < 12 && Math.abs(u.y1 - p.y) < 12 && u.first) || (Math.abs(u.x2 - p.x) < 12 && Math.abs(u.y2 - p.y) < 12 && u.last))) ? 140 : 0);
 
     // Fast path: the two boxes face each other, so a straight line is the whole route.
     const facing = [['right', 'left'], ['left', 'right'], ['bottom', 'top'], ['top', 'bottom']];
     for (const [sa, sb] of facing) {
-      const p = pa.find((q) => q.s === sa), q = pb.find((t) => t.s === sb);
-      if (!p || !q) continue;
+      const p = pa.find((q) => q.s === sa && !q.off), q = pb.find((t) => t.s === sb && !t.off);
+      if (!p || !q || portCost(p) || portCost(q)) continue;
       const ahead = (q.x - p.x) * p.d[0] + (q.y - p.y) * p.d[1];
       const aligned = p.d[0] === 0 ? Math.abs(p.x - q.x) < 1 : Math.abs(p.y - q.y) < 1;
       if (ahead > 6 && aligned && clear(p.x, p.y, q.x, q.y)) return [[p.x, p.y], [q.x, q.y]];
@@ -139,7 +156,6 @@
       for (const r of soft) if (inside(r, x, y)) return 5;
       return 1;
     };
-    const bus = (u) => (u.from === arrow.from || u.to === arrow.to) && u.tone === arrow.tone;
     const usedCost = (x1, y1, x2, y2) => {
       let k = 1, plus = 0;
       const horiz = y1 === y2;
@@ -150,19 +166,19 @@
           if (off >= 10) continue;
           const lo = horiz ? Math.max(Math.min(x1, x2), Math.min(u.x1, u.x2)) : Math.max(Math.min(y1, y2), Math.min(u.y1, u.y2));
           const hi = horiz ? Math.min(Math.max(x1, x2), Math.max(u.x1, u.x2)) : Math.min(Math.max(y1, y2), Math.max(u.y1, u.y2));
-          if (hi - lo <= 0.5) continue;
-          if (off < 0.5 && bus(u)) k = Math.min(k, 0.85); else k = Math.max(k, 4);
+          if (hi - lo <= 0.5) { if (arrow.ref && off < 0.5 && hi - lo > -160 && !bus(u)) plus += 400; continue; }
+          if (off < 0.5 && bus(u)) k = Math.min(k, 0.85); else k = Math.max(k, arrow.ref ? 12 : 4);
         } else if (!bus(u)) {
           const cx = horiz ? u.x1 : x1, cy = horiz ? y1 : u.y1;
-          const onMe = horiz ? cx > Math.min(x1, x2) && cx < Math.max(x1, x2) : cy > Math.min(y1, y2) && cy < Math.max(y1, y2);
+          // Strictly inside this step, or at its far end: two lines that meet on a grid point cross there too.
+          const onMe = horiz ? (cx > Math.min(x1, x2) && cx < Math.max(x1, x2)) || cx === x2 : (cy > Math.min(y1, y2) && cy < Math.max(y1, y2)) || cy === y2;
           const onU = horiz ? cy > Math.min(u.y1, u.y2) && cy < Math.max(u.y1, u.y2) : cx > Math.min(u.x1, u.x2) && cx < Math.max(u.x1, u.x2);
-          if (onMe && onU) plus += 70;
+          if (onMe && onU) plus += arrow.ref ? 1500 : 70;
         }
       }
       return [k, plus];
     };
 
-    const portCost = (p) => (used.some((u) => !bus(u) && ((Math.abs(u.x1 - p.x) < 12 && Math.abs(u.y1 - p.y) < 12 && u.first) || (Math.abs(u.x2 - p.x) < 12 && Math.abs(u.y2 - p.y) < 12 && u.last))) ? 140 : 0);
     // Dijkstra over (column, row, heading).
     const BEND = 64;
     const id = (ix, iy, d) => (iy * NX + ix) * 4 + d;
@@ -294,8 +310,9 @@
       if (!a || !b) { fig.problems.push(`Arrow ${from} → ${to}: there is no element with id "${!a ? from : to}".`); continue; }
       const tone = TONES.find((t) => tag.hasAttribute(t) || tag.getAttribute('tone') === t) ?? (tag.getAttribute('tone') === 'ink' ? 'ink' : 'line');
       const color = css('--' + tone);
+      const ref = tag.getAttribute('ref');
       const arrow = {
-        from, to, tone, fromSides: sides(tag.getAttribute('from-side')), toSides: sides(tag.getAttribute('to-side')),
+        from, to, tone, ref, fromSides: sides(tag.getAttribute('from-side')), toSides: sides(tag.getAttribute('to-side')),
         fromAt: num(tag.getAttribute('from-at')), toAt: num(tag.getAttribute('to-at')),
       };
       const A = { el: a, r: rectOf(a) }, B = { el: b, r: rectOf(b) };
@@ -310,7 +327,7 @@
       if (mode === 'ortho') {
         pts = routeOrtho(A, B, mine, arrow, used, W, H);
         if (!pts) { fig.problems.push(`Arrow ${from} → ${to}: no route found. Leave a gap beside the boxes, or set from-side / to-side.`); continue; }
-        for (let i = 1; i < pts.length; i++) used.push({ x1: pts[i - 1][0], y1: pts[i - 1][1], x2: pts[i][0], y2: pts[i][1], from, to, tone, first: i === 1, last: i === pts.length - 1 });
+        for (let i = 1; i < pts.length; i++) used.push({ x1: pts[i - 1][0], y1: pts[i - 1][1], x2: pts[i][0], y2: pts[i][1], from, to, tone, ref, first: i === 1, last: i === pts.length - 1 });
       } else {
         const { p, q } = routeLoose(A, B, arrow);
         if (mode === 'straight') {
@@ -328,26 +345,121 @@
       // Heads first, so the line stops at the base of each head.
       let start = pts[0], end = pts[pts.length - 1];
       const beforeEnd = pts.curve ? pts.curve[1] : pts[pts.length - 2], afterStart = pts.curve ? pts.curve[0] : pts[1];
-      if (heads === 'blocked') end = blockedEnd(svg, end, beforeEnd, color, weight);
-      if (heads === 'end' || heads === 'both') end = head(svg, end, beforeEnd, color, size);
-      if (heads === 'both') start = head(svg, start, afterStart, color, size);
+      // A reference has no head: a dot on the record it names, and on the holder a crow's foot when many can hold
+      // one, a short bar when only one can.
+      if (ref) svgEl('circle', { cx: end[0], cy: end[1], r: weight + 4, fill: color }, svg);
+      if (ref && !pts.curve) {
+        const [ax, ay] = pts[0], [bx, by] = pts[1], len = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / len, uy = (by - ay) / len;
+        const mark = (x1, y1, x2, y2) => svgEl('line', { x1, y1, x2, y2, stroke: color, 'stroke-width': weight, 'stroke-linecap': 'round' }, svg);
+        if (ref === 'many') {
+          const tip = [ax + ux * 20, ay + uy * 20];
+          for (const k of [-1, 0, 1]) mark(tip[0], tip[1], ax - uy * k * 11, ay + ux * k * 11);
+        } else {
+          const at = [ax + ux * 12, ay + uy * 12];
+          mark(at[0] - uy * 7, at[1] + ux * 7, at[0] + uy * 7, at[1] - ux * 7);
+        }
+      }
+      else if (heads === 'blocked') end = blockedEnd(svg, end, beforeEnd, color, weight);
+      if (!ref && (heads === 'end' || heads === 'both')) end = head(svg, end, beforeEnd, color, size);
+      if (!ref && heads === 'both') start = head(svg, start, afterStart, color, size);
       const line = [start, ...pts.slice(1, -1), end];
       pathD = pts.curve ? `M${start[0]},${start[1]} C${pts.curve[0][0]},${pts.curve[0][1]} ${pts.curve[1][0]},${pts.curve[1][1]} ${end[0]},${end[1]}` : roundedPath(line);
       const attrs = { d: pathD, fill: 'none', stroke: color, 'stroke-width': weight, 'stroke-linecap': 'round' };
       if (dash) attrs['stroke-dasharray'] = dash;
       svgEl('path', attrs, svg);
-      fig.wires.push({ from, to, pts, mode });
+      fig.wires.push({ from, to, pts, mode, ref });
 
-      const text = tag.getAttribute('label') ?? tag.textContent.trim();
+      const text = ref ? '' : tag.getAttribute('label') ?? tag.textContent.trim();
       if (text) labels.push({ text, tone, color, pts, at: labelAt, want: tag.getAttribute('label-at'), from, to });
     }
-    placeLabels(labels, obs);
+    return placeLabels(labels, obs);
+  }
+
+  /** Pairs of drawn lines that cross. Arrows from one box, or into one box, share a trunk, so meeting is not crossing. */
+  function crossingPairs() {
+    const segs = (fig.wires ?? []).filter((w) => w.mode !== 'curve').flatMap((w) => w.pts.slice(1).map((b, i) => ({ w, a: w.pts[i], b })));
+    const out = [];
+    for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++) {
+      const s = segs[i], t = segs[j];
+      if (s.w === t.w || (s.w.from === t.w.from && !(s.w.ref && t.w.ref)) || s.w.to === t.w.to) continue;
+      const sh = s.a[1] === s.b[1], th = t.a[1] === t.b[1];
+      if (sh === th) continue;
+      const h = sh ? s : t, v = sh ? t : s;
+      const x = v.a[0], y = h.a[1];
+      if (x > Math.min(h.a[0], h.b[0]) + 1 && x < Math.max(h.a[0], h.b[0]) - 1 && y > Math.min(v.a[1], v.b[1]) + 1 && y < Math.max(v.a[1], v.b[1]) - 1
+        && !out.some(([u, w]) => u === s.w && w === t.w)) out.push([s.w, t.w]);
+    }
+    return out;
+  }
+
+  /**
+   * A label that found no free place: open the gap between its two boxes so it has one, and say whether anything
+   * changed. The gap grows on the row, column or grid that holds both boxes, between the parts holding each.
+   */
+  function widen(fails, tried) {
+    let changed = false;
+    for (const f of fails) {
+      const key = f.from + '>' + f.to;
+      if (tried.has(key)) continue;
+      tried.set(key, null);
+      const a = document.getElementById(f.from), b = document.getElementById(f.to);
+      let lca = a.parentElement;
+      while (lca && !lca.contains(b)) lca = lca.parentElement;
+      if (!lca || !root().contains(lca)) continue;
+      const ca = [...lca.children].find((c) => c.contains(a)), cb = [...lca.children].find((c) => c.contains(b));
+      if (!ca || !cb || ca === cb) continue;
+      const cs = getComputedStyle(lca);
+      if (!/flex|grid/.test(cs.display)) continue;
+      const ra = ca.getBoundingClientRect(), rb = cb.getBoundingClientRect();
+      const across = ra.right <= rb.left + 1 || rb.right <= ra.left + 1;
+      const now = across ? Math.max(rb.left - ra.right, ra.left - rb.right) : Math.max(rb.top - ra.bottom, ra.top - rb.bottom);
+      const more = Math.max((across ? f.w : f.h) + 64 - now, 24);
+      const R = root();
+      const undo = { el: lca, prop: across ? 'columnGap' : 'rowGap', gap: lca.style[across ? 'columnGap' : 'rowGap'], w: R.style.width, v: R.style.getPropertyValue('--w') };
+      lca.style[undo.prop] = (parseFloat(cs[undo.prop]) || 0) + more + 'px';
+      // A wider gap must not squeeze a box until its text overflows: the figure grows instead, by at most a third.
+      if (across && squeezed()) {
+        const base = Number(R.dataset.baseWidth ||= String(R.offsetWidth));
+        const gaps = /grid/.test(cs.display) ? cs.gridTemplateColumns.split(' ').length - 1 : [...lca.children].filter((c) => c.offsetParent !== null).length - 1;
+        const wider = R.offsetWidth + more * Math.max(gaps, 1);
+        if (wider > base * 1.34) { lca.style[undo.prop] = undo.gap; continue; }
+        R.style.setProperty('--w', wider + 'px');
+        R.style.width = wider + 'px';
+        if (squeezed()) { lca.style[undo.prop] = undo.gap; R.style.width = undo.w; if (undo.v) R.style.setProperty('--w', undo.v); else R.style.removeProperty('--w'); continue; }
+      }
+      tried.set(key, undo);
+      changed = true;
+    }
+    return changed;
+  }
+
+  /** Whether any text now runs past the right edge of its box. */
+  function squeezed() {
+    return [...root().querySelectorAll('.node')].some((n) => {
+      const b = rectOf(n);
+      return [...n.querySelectorAll('*')].some((e) => [...e.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim()) && (() => { const t = textRect(e); return t.w && t.x + t.w > b.x + b.w + 1; })());
+    });
+  }
+
+  /** Puts back a widening that did not free its label (an arrow that runs around the outside, not through the gap). */
+  function unwiden(fails, tried) {
+    let changed = false;
+    for (const f of fails) {
+      const undo = tried.get(f.from + '>' + f.to);
+      if (!undo) continue;
+      undo.el.style[undo.prop] = undo.gap;
+      root().style.width = undo.w;
+      if (undo.v) root().style.setProperty('--w', undo.v); else root().style.removeProperty('--w');
+      tried.set(f.from + '>' + f.to, null);
+      changed = true;
+    }
+    return changed;
   }
 
   /** Put each arrow label where it touches nothing: on its line if the line is long enough, otherwise beside it. */
   function placeLabels(labels, obs) {
     const R = root(), W = R.offsetWidth, H = R.offsetHeight;
-    const placed = [];
+    const placed = [], fails = [];
     const segsOf = (pts) => pts.slice(1).map((b, i) => ({ a: pts[i], b, len: Math.hypot(b[0] - pts[i][0], b[1] - pts[i][1]) }));
     const wireHit = (r, skip) => (fig.wires ?? []).some((w) => segsOf(w.pts).some((s) => s !== skip && !(skip && s.a === skip.a && s.b === skip.b)
       && Math.min(Math.max(s.a[0], s.b[0]), r.x + r.w) >= Math.max(Math.min(s.a[0], s.b[0]), r.x) && Math.min(Math.max(s.a[1], s.b[1]), r.y + r.h) >= Math.max(Math.min(s.a[1], s.b[1]), r.y)));
@@ -396,11 +508,12 @@
         if (placed.some((p) => overlap(grow(r, 4), p))) return false;
         return !wireHit(grow(r, 2), cand.on);
       };
-      const pick = cands.find(free) ?? cands[0];
+      const pick = cands.find(free) ?? (fails.push({ from: L.from, to: L.to, w, h }), cands[0]);
       lab.style.left = pick.c[0] + 'px';
       lab.style.top = pick.c[1] + 'px';
       placed.push(rectAt(pick.c));
     }
+    return fails;
   }
 
   // ---------- split bar and bars (drawn by viz/draw.js, loaded as window.figkitViz) ----------
@@ -503,17 +616,10 @@
         if (hit) P.push(`Arrow ${w.from} → ${w.to} runs through ${name(o.el)}.`);
       }
     }
-    const crossings = new Set();
-    for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++) {
-      const s = segs[i], t = segs[j];
-      if (s.w === t.w || s.w.from === t.w.from || s.w.to === t.w.to) continue;
-      const sh = s.a[1] === s.b[1], th = t.a[1] === t.b[1];
-      if (sh === th) continue;
-      const h = sh ? s : t, v = sh ? t : s;
-      const x = v.a[0], y = h.a[1];
-      if (x > Math.min(h.a[0], h.b[0]) + 1 && x < Math.max(h.a[0], h.b[0]) - 1 && y > Math.min(v.a[1], v.b[1]) + 1 && y < Math.max(v.a[1], v.b[1]) - 1) crossings.add(`${s.w.from} → ${s.w.to} and ${t.w.from} → ${t.w.to}`);
-    }
-    if (crossings.size) P.push(`Arrows cross: ${[...crossings].join('; ')}. Reorder the boxes so they do not, or drop an arrow.`);
+    const crossings = new Set(crossingPairs().map(([u, w]) => `${u.from} → ${u.to} and ${w.from} → ${w.to}`));
+    if (crossings.size) P.push(R.querySelector('.entities')
+      ? `References cross: ${[...crossings].join('; ')}. Split the records over two figures; do not leave a reference out.`
+      : `Arrows cross: ${[...crossings].join('; ')}. Reorder the boxes so they do not, or drop an arrow.`);
 
     // Neighbours that almost line up.
     const boxes = obs.filter((o) => !o.text && !o.el.classList.contains('fig-wire-label') && !o.el.classList.contains('decision') && !o.el.parentElement.closest('.node'));
@@ -521,6 +627,8 @@
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i], b = boxes[j];
       if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+      // Records share a top edge in their row; their heights follow their fields, which figkit placed, not the author.
+      if (a.el.classList.contains('record') && b.el.classList.contains('record')) continue;
       const edges = [['left edges', a.r.x, b.r.x], ['right edges', a.r.x + a.r.w, b.r.x + b.r.w], ['top edges', a.r.y, b.r.y], ['bottom edges', a.r.y + a.r.h, b.r.y + b.r.h]];
       for (const [what, u, v] of edges) { const d = Math.abs(u - v); if (d > 0.75 && d <= 6) near.push(`${name(a.el)} and ${name(b.el)} (${what}, ${d.toFixed(0)}px apart)`); }
     }
@@ -529,9 +637,9 @@
     // Too much on the page.
     const words = R.innerText.split(/\s+/).filter(Boolean).length;
     const nodes = R.querySelectorAll('.node:not(.bare), .decision').length, arrows = (fig.wires ?? []).length;
-    const budget = detail ? { words: 190, nodes: 18, arrows: 18 } : { words: 70, nodes: 8, arrows: 8 };
+    const budget = detail ? { words: 190, nodes: 18, arrows: 18 } : { words: 70, nodes: 5, arrows: 8 };
     if (words > budget.words) P.push(`${words} words; a ${detail ? 'detail' : 'glance'} figure holds about ${budget.words}. Cut sentences that explain, and keep labels.`);
-    if (nodes > budget.nodes) P.push(`${nodes} boxes; more than ${budget.nodes} stops reading as one picture. Split it into two figures or merge boxes.`);
+    if (nodes > budget.nodes) P.push(`${nodes} boxes; more than ${budget.nodes} stops reading as one picture. ${detail ? 'Split it into two figures or merge boxes.' : 'Split it into two or three figures in a row (what exists, one case through it, what changes), or merge boxes.'}`);
     if (arrows > budget.arrows) P.push(`${arrows} arrows; more than ${budget.arrows} tangles. Show the main path and drop the rest.`);
     const tones = TONES.filter((t) => R.querySelector(`.${t}, [${t}], .t-${t}`));
     if (tones.length > 2) P.push(`${tones.length} colours carry meaning (${tones.join(', ')}); use one for what the reader must notice and at most one more.`);
@@ -564,7 +672,30 @@
       else { buildSplits(); buildBars(); }
       for (const job of fig.queue) job();
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      drawArrows();
+      // A label with no free place opens the gap it needs, then everything is drawn again.
+      const tried = new Map();
+      for (let i = 0; ; i++) {
+        const fails = drawArrows();
+        if (!fails.length || i === 6) break;
+        const undone = unwiden(fails, tried), widened = widen(fails, tried);
+        if (!undone && !widened) break;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      }
+      // Two lines that cross can often pass each other if the later one is drawn first.
+      for (let i = 0; i < 4; i++) {
+        const pairs = crossingPairs();
+        if (!pairs.length) break;
+        const tags = [...document.querySelectorAll('fig-arrow')], at = (w) => tags.find((t) => t.getAttribute('from') === w.from && t.getAttribute('to') === w.to);
+        const [u, w] = pairs[0], first = at(u), second = at(w);
+        if (!first || !second) break;
+        const mark = document.createComment('');
+        second.replaceWith(mark); first.before(second);
+        drawArrows();
+        if (crossingPairs().length < pairs.length) { mark.remove(); continue; }
+        second.remove(); mark.replaceWith(second);
+        drawArrows();
+        break;
+      }
       check();
     } catch (e) { fig.problems.push('figkit failed: ' + (e.stack || e.message)); }
     window.__figDone = true;

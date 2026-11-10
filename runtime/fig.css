@@ -57,7 +57,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .fig p { margin: 0; }
 .fig .note { font-size: var(--small); color: var(--muted); max-width: 34ch; }
 .fig .num { font-family: var(--serif); font-size: var(--num); line-height: 1; letter-spacing: -.01em; }
-.fig .tag { font-family: var(--mono); font-size: var(--small); color: var(--soft); }
+.fig .tag { font-family: var(--mono); font-size: var(--small); font-weight: 400; color: var(--soft); }
 .fig code { font-family: var(--mono); font-size: .92em; }
 .fig .t-accent { color: var(--accent); } .fig .t-second { color: var(--second); }
 .fig .t-good { color: var(--good); } .fig .t-bad { color: var(--bad); }
@@ -117,6 +117,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .fig .lane-title { font-size: var(--small); font-weight: 600; color: var(--muted); letter-spacing: .01em; }
 .fig hr { border: 0; border-top: 1px solid var(--hair); margin: 0; width: 100%; }
 .fig .divide { border-left: 1px solid var(--hair); align-self: stretch; }
+
+/* ---------- entities: records and the references between them (a spec of type "entities") ---------- */
+.fig .entities { display: grid; column-gap: 110px; row-gap: 96px; align-items: start; }
+.fig.phone .entities { column-gap: 72px; row-gap: 84px; }
+.fig .record > ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.fig .record > ul li { font-size: var(--small); color: var(--muted); }
 
 /* ---------- arrows (drawn by fig.js) ---------- */
 fig-arrow { display: none; }

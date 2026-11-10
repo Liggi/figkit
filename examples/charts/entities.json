@@ -1,0 +1,17 @@
+{
+  "type": "entities",
+  "title": "Every order line names one product and one order",
+  "records": [
+    { "id": "customer", "name": "Customer", "fields": ["email"] },
+    { "id": "order", "name": "Order", "fields": ["placed at", "status"] },
+    { "id": "line", "name": "Order line", "fields": ["quantity"], "tone": "accent" },
+    { "id": "product", "name": "Product", "fields": ["sku", "price"] },
+    { "id": "payment", "name": "Payment", "fields": ["amount"] }
+  ],
+  "refs": [
+    { "from": "order", "to": "customer" },
+    { "from": "line", "to": "order" },
+    { "from": "line", "to": "product" },
+    { "from": "payment", "to": "order", "count": "one", "optional": true }
+  ]
+}

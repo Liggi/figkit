@@ -201,12 +201,100 @@ export function drawSeries(host, spec) {
   });
 }
 
+/**
+ * Where each record sits: every arrangement of the records over a few small grids is scored, and the best kept.
+ * A score counts references that cross, references that pass over another record, long references, and records drawn
+ * above what they point at (a reference reads upward, to the thing it names). A phone gets at most two columns.
+ */
+export function placeRecords(records, refs, phone) {
+  const n = records.length;
+  const shapes = [];
+  for (let rows = 1; rows <= 3; rows++) for (let cols = 1; cols <= (phone ? 2 : 3); cols++) {
+    if (rows * cols >= n && rows * cols - n < Math.min(rows, cols)) shapes.push([rows, cols]);
+  }
+  const idx = new Map(records.map((r, i) => [r.id, i]));
+  const edges = refs.map((r) => [idx.get(r.from), idx.get(r.to)]);
+  const cross = (a, b, c, d) => {
+    const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+    return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+  };
+  // A record's cell is about 1.6 times as wide as it is tall, gaps included.
+  const pt = ([r, c]) => [c * 1.6, r];
+  const over = (a, b, cell) => {
+    const [x1, y1] = pt(a), [x2, y2] = pt(b), [cx, cy] = pt(cell);
+    const hw = 0.55, hh = 0.32;
+    for (let t = 0.04; t < 1; t += 0.04) { const x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t; if (Math.abs(x - cx) < hw && Math.abs(y - cy) < hh) return true; }
+    return false;
+  };
+  let best = null;
+  for (const [rows, cols] of shapes) {
+    const cells = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) cells.push([r, c]);
+    const used = new Array(cells.length).fill(false), at = new Array(n);
+    const score = () => {
+      let s = rows * 0.6 + cols * 0.3;
+      const pos = at.map((k) => cells[k]);
+      edges.forEach(([f, t], i) => {
+        const a = pos[f], b = pos[t];
+        const [x1, y1] = pt(a), [x2, y2] = pt(b);
+        s += Math.hypot(x2 - x1, y2 - y1) * 1.2;
+        if (a[0] !== b[0] && a[1] !== b[1]) s += 1.5;
+        if (a[0] < b[0]) s += 3;
+        pos.forEach((p, k) => { if (k !== f && k !== t && over(a, b, p)) s += 12; });
+        for (const [g, u] of edges.slice(i + 1)) if (g !== f && g !== t && u !== f && u !== t && cross(pt(a), pt(b), pt(pos[g]), pt(pos[u]))) s += 8;
+      });
+      // An empty cell in the middle of a row reads as something missing.
+      for (let r = 0; r < rows; r++) for (let c = 1; c < cols - 1; c++) if (!pos.some((p) => p[0] === r && p[1] === c) && pos.some((p) => p[0] === r)) s += 4;
+      return s;
+    };
+    const walk = (i) => {
+      if (i === n) { const s = score(); if (!best || s < best.s - 1e-9) best = { s, rows, cols, pos: at.map((k) => cells[k]) }; return; }
+      for (let k = 0; k < cells.length; k++) if (!used[k]) { used[k] = true; at[i] = k; walk(i + 1); used[k] = false; }
+    };
+    walk(0);
+  }
+  return best;
+}
+
+/** Records and the references between them into the figure: boxes on a grid figkit chose, and <fig-arrow ref> lines. */
+function drawEntities(spec, main) {
+  const phone = main.classList.contains('phone');
+  const { rows, cols, pos } = placeRecords(spec.records, spec.refs, phone);
+  const grid = document.createElement('div');
+  grid.className = 'entities';
+  grid.style.cssText = `grid-template-columns: repeat(${cols}, minmax(0, 1fr)); grid-template-rows: repeat(${rows}, auto);`;
+  spec.records.forEach((r, i) => {
+    const fields = r.fields ?? [];
+    const box = document.createElement('div');
+    box.className = 'node record' + (r.tone ? ' accent' : '');
+    box.id = 'rec-' + r.id;
+    box.style.gridArea = `${pos[i][0] + 1} / ${pos[i][1] + 1}`;
+    box.innerHTML = `<h3>${esc(r.name)}</h3>${fields.length ? `<ul>${fields.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}`;
+    grid.appendChild(box);
+  });
+  main.appendChild(grid);
+  for (const ref of spec.refs) {
+    const a = document.createElement('fig-arrow');
+    a.setAttribute('from', 'rec-' + ref.from);
+    a.setAttribute('to', 'rec-' + ref.to);
+    a.setAttribute('ref', ref.count);
+    if (ref.optional) a.setAttribute('dashed', '');
+    main.appendChild(a);
+  }
+}
+
 const HOSTS = { split: 'fig-split', bars: 'fig-bars', 'before-after': 'fig-change', dumbbell: 'div', series: 'div' };
 
 /** A checked spec drawn into a figure: header, chart and footer, as figkit's own markup. */
 export function drawSpec(spec, main) {
   const header = document.createElement('header');
   header.innerHTML = `<h1>${esc(spec.title)}</h1>${spec.note ? `<p class="read">${esc(spec.note)}</p>` : ''}`;
+  if (spec.type === 'entities') {
+    main.append(header);
+    drawEntities(spec, main);
+    if (spec.source) { const footer = document.createElement('footer'); footer.innerHTML = `<p>${esc(spec.source)}</p>`; main.append(footer); }
+    return { chart: main.querySelector('.entities'), draw: () => {} };
+  }
   const chart = document.createElement(HOSTS[spec.type]);
   main.append(header, chart);
   if (spec.source) {

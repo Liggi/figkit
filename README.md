@@ -46,8 +46,8 @@ npx figkit order.html --out order.png
 
 ## A chart from a spec
 
-For one chart of a known type (`split`, `bars`, `before-after`, `dumbbell`, `series`) give the data and figkit does
-the rest. Save this as `checkout.json`:
+For one chart of a known type (`split`, `bars`, `before-after`, `dumbbell`, `series`), or an `entities` picture of
+records and the references between them, give the data and figkit does the rest, including the layout. Save this as `checkout.json`:
 
 ```json
 { "type": "bars", "title": "The new checkout halves the time to pay",
