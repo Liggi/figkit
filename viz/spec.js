@@ -10,6 +10,7 @@ const common = {
   note: z.string().trim().max(160, 'keep the note to 160 characters').optional(),
   unit: z.string().max(8).optional(),
   source: z.string().trim().max(120).optional(),
+  style: z.enum(['report'], { error: 'style: "report" for a light chart that sits in a page, or leave it out' }).optional(),
 };
 const value = z.number({ error: 'must be a number' }).finite();
 
@@ -84,6 +85,70 @@ export const SeriesSpec = z.object({
   zero: z.boolean().optional(),
 }).strict();
 
+
+const seriesName = label.max(28, 'keep series names to 28 characters');
+const TONE_ONE = z.enum(['accent', 'good', 'bad'], { error: 'tone: "accent", or "good" or "bad" when it is a result' });
+
+/** Bars in groups: each group a few bars, one per series, read across the groups. */
+const groupRow = z.object({
+  label: label.max(32, 'keep group labels to 32 characters'),
+  values: z.array(value.nonnegative('must be 0 or more: bars start at zero')),
+}).strict();
+const groupsData = {
+  series: z.array(seriesName).min(2, 'at least 2 series; one bar per group is a "bars" chart').max(4, 'at most 4 series; more is too many bars to read'),
+  groups: z.array(groupRow).min(2, 'at least 2 groups; one group is a "bars" chart').max(6, 'at most 6 groups'),
+  accent: z.object({
+    series: z.string().optional(),
+    group: z.string().optional(),
+    tone: TONE_ONE.optional(),
+  }, { error: 'required: what to notice, { "series" } for a whole series, or { "series", "group" } for one bar' }).strict(),
+  max: z.number().positive().optional(),
+};
+export const GroupsSpec = z.object({ type: z.literal('groups'), ...common, ...groupsData }).strict();
+
+/** Two or three lines on one axis, each named at its end; one is the line to notice. */
+const linePoint = z.object({ x: point, y: value }).strict();
+const linesData = {
+  series: z.array(z.object({
+    label: seriesName,
+    points: z.array(linePoint).min(3, 'a line needs at least 3 points').max(2000),
+  }).strict()).min(2, 'at least 2 lines; one line is a "series" chart').max(3, 'at most 3 lines on one axis; more is small multiples ("panels")'),
+  accent: z.string({ error: 'required: the label of the line to notice' }),
+  mark: z.object({ x: point, label: z.string().trim().min(1).max(32, 'keep the mark label to 32 characters') }).strict().optional(),
+  zero: z.boolean().optional(),
+  xTicks: z.array(z.object({ x: point, label: z.string().trim().min(1).max(12, 'keep tick labels to 12 characters') }).strict()).min(2).max(8, 'at most 8 ticks').optional(),
+};
+export const LinesSpec = z.object({ type: z.literal('lines'), ...common, ...linesData }).strict();
+
+/** The same chart drawn once per part, side by side on one scale. */
+export const PanelsSpec = z.object({
+  type: z.literal('panels'),
+  ...common,
+  chart: z.enum(['groups', 'lines'], { error: 'chart: "groups" or "lines", the chart each panel draws' }),
+  series: groupsData.series.optional(),
+  accent: z.union([z.string(), groupsData.accent]),
+  max: z.number().positive().optional(),
+  zero: z.boolean().optional(),
+  xTicks: linesData.xTicks,
+  panels: z.array(z.object({
+    label: label.max(32, 'keep panel labels to 32 characters'),
+    groups: z.array(groupRow).min(1).max(6, 'at most 6 groups').optional(),
+    series: linesData.series.optional(),
+  }).strict()).min(2, 'at least 2 panels').max(4, 'at most 4 panels; more is two figures'),
+}).strict();
+
+/** A grid of values coloured from pale to strong: where something is high or low across two dimensions. */
+const axisLabel = z.union([z.string().trim().min(1).max(16, 'keep row and column labels to 16 characters'), z.number().finite()]);
+export const HeatmapSpec = z.object({
+  type: z.literal('heatmap'),
+  ...common,
+  note: z.string({ error: 'required: what the colour counts, e.g. "People active per hour"' }).trim().min(1).max(160, 'keep the note to 160 characters'),
+  rows: z.array(axisLabel).min(2).max(12, 'at most 12 rows'),
+  columns: z.array(axisLabel).min(2).max(31, 'at most 31 columns'),
+  values: z.array(z.array(value)),
+  mark: z.object({ row: axisLabel, column: axisLabel, label: z.string().trim().min(1).max(32, 'keep the mark label to 32 characters') }).strict().optional(),
+}).strict();
+
 const slug = z.string({ error: 'needs an id, e.g. "order"' }).regex(/^[a-z][a-z0-9-]{0,23}$/, 'ids are short lowercase words, e.g. "order" or "order-line"');
 
 /**
@@ -95,6 +160,7 @@ export const EntitiesSpec = z.object({
   title,
   note: common.note,
   source: common.source,
+  style: common.style,
   records: z.array(z.object({
     id: slug,
     name: label.max(32, 'keep record names to 32 characters'),
@@ -111,14 +177,67 @@ export const EntitiesSpec = z.object({
   }).strict()).min(1, 'at least 1 reference').max(8, 'at most 8 references; more is two figures, not a reference left out'),
 }).strict();
 
-export const Spec = z.discriminatedUnion('type', [SplitSpec, BarsSpec, BeforeAfterSpec, DumbbellSpec, SeriesSpec, EntitiesSpec]);
-export const TYPES = { split: SplitSpec, bars: BarsSpec, 'before-after': BeforeAfterSpec, dumbbell: DumbbellSpec, series: SeriesSpec, entities: EntitiesSpec };
+export const Spec = z.discriminatedUnion('type', [SplitSpec, BarsSpec, BeforeAfterSpec, DumbbellSpec, SeriesSpec, EntitiesSpec, GroupsSpec, LinesSpec, PanelsSpec, HeatmapSpec]);
+export const TYPES = { split: SplitSpec, bars: BarsSpec, 'before-after': BeforeAfterSpec, dumbbell: DumbbellSpec, series: SeriesSpec, entities: EntitiesSpec, groups: GroupsSpec, lines: LinesSpec, panels: PanelsSpec, heatmap: HeatmapSpec };
 
 const items = (s) => s.parts ?? s.bars ?? s.rows ?? s.records ?? (s.after ? [s.after] : []);
 const kind = (v) => (typeof v === 'number' ? 'number' : 'date');
 
+
+function groupsChecks(s, at = '') {
+  const out = [];
+  s.groups.forEach((g, i) => { if (g.values.length !== s.series.length) out.push(`${at}groups[${i}].values: one value per series, ${s.series.length}, not ${g.values.length}`); });
+  if (s.accent.series !== undefined && !s.series.includes(s.accent.series)) out.push(`accent.series: must be one of ${s.series.map((x) => `"${x}"`).join(', ')}`);
+  if (s.accent.group !== undefined && !s.groups.some((g) => g.label === s.accent.group)) out.push(`${at}accent.group: must be the label of one of the groups`);
+  if (s.accent.series === undefined && s.accent.group === undefined) out.push('accent: name the series to notice, or a series and a group for one bar');
+  if (s.max !== undefined && s.groups.some((g) => g.values.some((v) => v > s.max))) out.push('max: every value must be at most max');
+  return out;
+}
+function linesChecks(s, at = '') {
+  const out = [];
+  const xs = s.series.flatMap((l) => l.points.map((p) => p.x));
+  if (new Set(xs.map(kind)).size > 1) out.push(`${at}series: x values must be all numbers or all dates, not both`);
+  const t = (x) => (typeof x === 'number' ? x : Date.parse(x));
+  s.series.forEach((l, i) => { for (let j = 1; j < l.points.length; j++) if (t(l.points[j].x) <= t(l.points[j - 1].x)) { out.push(`${at}series[${i}].points[${j}].x: points must be in order of x`); break; } });
+  const names = s.series.map((l) => l.label);
+  if (new Set(names).size < names.length) out.push(`${at}series: two lines have the same label`);
+  if (!names.includes(s.accent)) out.push(`accent: must be the label of one of the lines, ${names.map((x) => `"${x}"`).join(', ')}`);
+  if (s.mark) { const line = s.series.find((l) => l.label === s.accent); if (line && !line.points.some((p) => t(p.x) === t(s.mark.x))) out.push(`mark.x: must be the x of one of the points on the "${s.accent}" line`); }
+  return out;
+}
+
 /** Rules that span fields: x values of one kind, in order, and a mark that is one of the points. */
 function crossChecks(s) {
+  if (s.type === 'groups') return groupsChecks(s);
+  if (s.type === 'lines') return linesChecks(s);
+  if (s.type === 'panels') {
+    const out = [];
+    s.panels.forEach((p, i) => {
+      const at = `panels[${i}].`;
+      if (s.chart === 'groups') {
+        if (!p.groups || p.series) { out.push(`${at}: a groups panel has "groups" and no "series"`); return; }
+        if (!s.series) { out.push('series: a groups chart names its series once, at the top'); return; }
+        if (typeof s.accent !== 'object') { out.push('accent: { "series" } or { "series", "group" } for a groups chart'); return; }
+        out.push(...groupsChecks({ series: s.series, groups: p.groups, accent: { ...s.accent, group: undefined }, max: s.max }, at));
+        if (s.accent.group !== undefined && !s.panels.some((q) => q.groups?.some((g) => g.label === s.accent.group))) out.push('accent.group: must be the label of a group in a panel');
+      } else {
+        if (!p.series || p.groups) { out.push(`${at}: a lines panel has "series" and no "groups"`); return; }
+        if (typeof s.accent !== 'string') { out.push('accent: the label of the line to notice, the same in every panel'); return; }
+        out.push(...linesChecks({ series: p.series, accent: s.accent }, at));
+        const names = (q) => q.series.map((l) => l.label).join('|');
+        if (names(p) !== names(s.panels[0])) out.push(`${at}series: every panel has the same lines, in the same order, so a line is one colour throughout`);
+      }
+    });
+    return [...new Set(out)];
+  }
+  if (s.type === 'heatmap') {
+    const out = [];
+    if (s.values.length !== s.rows.length) out.push(`values: one row of values per row label, ${s.rows.length}, not ${s.values.length}`);
+    s.values.forEach((r, i) => { if (r.length !== s.columns.length) out.push(`values[${i}]: one value per column, ${s.columns.length}, not ${r.length}`); });
+    if (s.mark && !s.rows.includes(s.mark.row)) out.push('mark.row: must be one of the row labels');
+    if (s.mark && !s.columns.includes(s.mark.column)) out.push('mark.column: must be one of the column labels');
+    return out;
+  }
   if (s.type === 'dumbbell') {
     const kinds = new Set(s.rows.flatMap((r) => [kind(r.from), kind(r.to)]));
     if (kinds.size > 1) return ['rows: use all numbers or all dates, not both'];

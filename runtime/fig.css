@@ -8,6 +8,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
   --paper: #2d3142; --panel: #252938; --ink: #f5f5f5; --muted: #c3c6cf; --soft: #949eb2; --line: #8d95ad; --hair: rgba(245,245,245,.16);
   --accent: #f08a59; --second: #739fdf; --good: #6fc392; --bad: #ef6b73;
   --on-fill: #1d2030;
+  /* grey marks: the ones not to notice; fill2 a darker grey for a second series */
+  --fill: var(--soft); --fill2: var(--line);
   --sans: 'Geist Sans', 'Geist', system-ui, sans-serif;
   --serif: 'Newsreader', Georgia, serif;
   --mono: 'Geist Mono', ui-monospace, monospace;
@@ -135,7 +137,7 @@ fig-arrow { display: none; }
 /* ---------- split bar: parts of a whole ---------- */
 fig-split { display: flex; flex-direction: column; gap: 10px; }
 fig-split .fs-bar { display: flex; gap: 3px; height: 58px; }
-fig-split .fs-seg { --tone: var(--soft); background: var(--tone); color: var(--on-fill); min-width: 4px; display: flex; align-items: center; gap: 10px; padding: 0 14px; overflow: hidden; white-space: nowrap; }
+fig-split .fs-seg { --tone: var(--fill); background: var(--tone); color: var(--on-fill); min-width: 4px; display: flex; align-items: center; gap: 10px; padding: 0 14px; overflow: hidden; white-space: nowrap; }
 fig-split .fs-seg:first-child { border-radius: 8px 0 0 8px; } fig-split .fs-seg:last-child { border-radius: 0 8px 8px 0; }
 fig-split .fs-seg.fs-out { padding: 0; }
 fig-split .fs-seg.fs-out > * { display: none; }
@@ -151,7 +153,7 @@ fig-change { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0,
 fig-change .fc-side { display: flex; flex-direction: column; gap: 10px; }
 fig-change .fc-when { font-size: var(--small); font-weight: 600; color: var(--muted); }
 fig-change .fc-num { font-family: var(--serif); font-weight: 400; font-size: calc(var(--num) * 1.5); line-height: 1; letter-spacing: -.01em; color: var(--ink); }
-fig-change .fc-bar { height: 14px; min-width: 3px; background: var(--soft); border-radius: 3px; }
+fig-change .fc-bar { height: 14px; min-width: 3px; background: var(--fill); border-radius: 3px; }
 fig-change .before .fc-num { color: var(--muted); }
 fig-change .after .fc-num { color: var(--tone); }
 fig-change .after .fc-bar { background: var(--tone); }
@@ -161,7 +163,7 @@ fig-change .fc-arrow { color: var(--soft); display: flex; }
 fig-bars { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 16px; row-gap: 10px; align-items: center; }
 fig-bars .fb-label { font-size: var(--body); }
 fig-bars .fb-track { display: flex; align-items: center; gap: 10px; min-width: 0; }
-fig-bars .fb-bar { --tone: var(--soft); height: 26px; background: var(--tone); border-radius: 3px; min-width: 3px; flex: 0 0 auto; }
+fig-bars .fb-bar { --tone: var(--fill); height: 26px; background: var(--tone); border-radius: 3px; min-width: 3px; flex: 0 0 auto; }
 fig-bars .fb-val { font-family: var(--serif); font-size: 1.3em; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
 fig-bars .fb-val.lead { color: var(--tone); }
 fig-bars .fb-sub { font-weight: 400; color: var(--soft); font-size: var(--small); margin-left: 6px; }
@@ -170,7 +172,7 @@ fig-bars .fb-sub { font-weight: 400; color: var(--soft); font-size: var(--small)
 .fig .chart { min-width: 0; }
 .fig .fd-key { display: flex; gap: 28px; margin: 0 0 18px; font-size: var(--small); font-weight: 600; color: var(--soft); }
 .fig .fd-key span { display: inline-flex; align-items: center; gap: 8px; }
-.fig .fd-key i { display: inline-block; width: 13px; height: 13px; border-radius: 50%; background: var(--soft); }
+.fig .fd-key i { display: inline-block; width: 13px; height: 13px; border-radius: 50%; background: var(--fill); }
 .fig .fd-key .fd-to i { width: 0; height: 0; border-radius: 0; background: none; border-left: 13px solid currentColor; border-top: 7.5px solid transparent; border-bottom: 7.5px solid transparent; }
 .fig .fd-key .fd-to.back i { transform: scaleX(-1); }
 .fig.chart > footer { border-top: 0; padding-top: 0; }
@@ -186,3 +188,33 @@ fig-bars .fb-sub { font-weight: 400; color: var(--soft); font-size: var(--small)
 .fig .t-second.t-second { color: var(--second); }
 .fig .t-good.t-good { color: var(--good); } .fig .t-bad.t-bad { color: var(--bad); }
 .fig .decision:not(.accent):not(.second):not(.good):not(.bad) { --tone: var(--line); }
+
+/* ---------- report: a light chart that sits in a page (a research report, a doc), set in one sans ---------- */
+.fig.report {
+  --paper: #ffffff; --panel: #ffffff; --ink: #1d2130; --muted: #5b6170; --soft: #7a8092; --line: #9aa0ad; --hair: rgba(29,33,48,.12);
+  --fill: #b4b8c2; --fill2: #7d8391;
+  --accent: #cf5a23; --second: #2f6bc4; --good: #2f8f5b; --bad: #c9414a; --on-fill: #ffffff;
+  --serif: var(--sans);
+  --w: 720px; --pad: 32px; --gap: 14px;
+  --title: 26px; --read: 18px; --h: 18px; --body: 17px; --small: 16px; --num: 30px;
+  border: 1px solid #e6e2d8; border-radius: 10px; gap: 20px;
+}
+.fig.panels-fig { --w: 1000px; }
+.fig.panels-fig.phone { --w: 560px; }
+.fig.report h1 { font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
+.fig.report > header { gap: 6px; }
+.fig.report > footer { border-top: 0; padding-top: 0; }
+.fig.report.phone { --w: 400px; --pad: 20px; --title: 22px; --read: 16px; --body: 16px; --small: 15px; }
+.fig.report fig-bars .fb-val, .fig.report fig-split .fs-seg b, .fig.report fig-change .fc-num { font-weight: 500; letter-spacing: 0; }
+.fig.report fig-bars .fb-val { font-size: 1.05em; }
+.fig.report fig-bars .fb-val.lead { font-weight: 600; }
+
+/* panels: the same chart drawn for each part, side by side, one above the other on a phone */
+.fig .panels { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); column-gap: 36px; row-gap: 28px; }
+.fig.phone .panels { grid-template-columns: minmax(0, 1fr); }
+.fig .panel > h2 { font-size: calc(var(--h) * 1.15); margin: 0 0 4px; }
+
+/* heat map scale: what the colour means, at readable size */
+.fig .hm-key { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: var(--small); color: var(--muted); margin: 0 0 12px; }
+.fig .hm-key i { display: inline-block; width: 160px; height: 14px; border-radius: 3px; }
+.fig.phone .hm-key i { width: 84px; }

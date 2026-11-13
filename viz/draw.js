@@ -108,7 +108,7 @@ export function drawChange(host, spec) {
 
 const themeOf = (host) => {
   const css = (n) => getComputedStyle(host).getPropertyValue(n).trim();
-  return { css, ink: css('--ink'), muted: css('--muted'), soft: css('--soft'), line: css('--line'), accent: css('--accent'), second: css('--second'), good: css('--good'), bad: css('--bad'), small: parseFloat(css('--small')) || 15, body: parseFloat(css('--body')) || 16, sans: css('--sans') };
+  return { css, ink: css('--ink'), muted: css('--muted'), soft: css('--soft'), fill: css('--fill'), fill2: css('--fill2'), hair: css('--hair'), paper: css('--paper'), line: css('--line'), accent: css('--accent'), second: css('--second'), good: css('--good'), bad: css('--bad'), small: parseFloat(css('--small')) || 15, body: parseFloat(css('--body')) || 16, sans: css('--sans') };
 };
 const toX = (v) => (typeof v === 'number' ? v : new Date(v));
 const num = (n) => (Math.abs(n) >= 100 ? Math.round(n) : Math.round(n * 10) / 10).toLocaleString('en-GB');
@@ -153,7 +153,7 @@ export function drawDumbbell(host, spec) {
     marks: [
       Plot.text(rows, { y: 'label', text: 'label', frameAnchor: 'left', dx: -(Math.ceil(labelW) + 28), textAnchor: 'start', fill: t.ink, fontSize: t.body }),
       Plot.link(rows, { x1: 'a', x2: 'b', y1: 'label', y2: 'label', stroke: 'color', strokeWidth: 3 }),
-      Plot.dot(rows, { x: 'a', y: 'label', r: 6.5, fill: t.soft }),
+      Plot.dot(rows, { x: 'a', y: 'label', r: 6.5, fill: t.fill }),
       // A fixed-size head at the end, pointing the way the row moved.
       // A fixed-size head whose tip, not its middle, sits on the end value.
       Plot.dot(rows.filter((r) => r.b >= r.a), { x: 'b', y: 'label', symbol: 'triangle2', r: 7.5, dx: -5, fill: 'color', rotate: 90 }),
@@ -165,6 +165,7 @@ export function drawDumbbell(host, spec) {
   const key = document.createElement('p');
   key.className = 'fd-key';
   key.innerHTML = `<span class="fd-from"><i></i>${esc(spec.fromLabel)}</span><span class="fd-to${rows.every((r) => r.b < r.a) ? ' back' : ''}" style="color:${t.accent}"><i></i>${esc(spec.toLabel)}</span>`;
+  key.style.marginLeft = labelW + 'px';
   host.prepend(key);
 }
 
@@ -194,7 +195,7 @@ export function drawSeries(host, spec) {
     y: { label: null, grid: true, ticks: 4, tickSize: 0, domain: zero ? [bottom, top * 1.04] : undefined, tickFormat: fmt },
     marks: [
       zero ? Plot.ruleY([0], { stroke: t.line }) : null,
-      Plot.lineY(pts, { x: 'x', y: 'y', stroke: t.soft, strokeWidth: 2.5 }),
+      Plot.lineY(pts, { x: 'x', y: 'y', stroke: t.fill, strokeWidth: 2.5 }),
       Plot.dot([mark], { x: 'x', y: 'y', r: 6.5, fill: t.accent }),
       Plot.text([mark], { x: 'x', y: 'y', text: () => spec.mark.label, dx: right ? 14 : -14, dy, textAnchor: right ? 'start' : 'end', fill: t.accent, fontWeight: 600, fontSize: t.body }),
     ],
@@ -283,7 +284,7 @@ function drawEntities(spec, main) {
   }
 }
 
-const HOSTS = { split: 'fig-split', bars: 'fig-bars', 'before-after': 'fig-change', dumbbell: 'div', series: 'div' };
+const HOSTS = { split: 'fig-split', bars: 'fig-bars', 'before-after': 'fig-change', dumbbell: 'div', series: 'div', groups: 'div', lines: 'div', panels: 'div', heatmap: 'div' };
 
 /** A checked spec drawn into a figure: header, chart and footer, as figkit's own markup. */
 export function drawSpec(spec, main) {
@@ -306,10 +307,170 @@ export function drawSpec(spec, main) {
     if (spec.type === 'before-after') return drawChange(chart, spec);
     if (spec.type === 'dumbbell') return drawDumbbell(chart, spec);
     if (spec.type === 'series') return drawSeries(chart, spec);
+    if (spec.type === 'groups') return drawGroups(chart, spec, { unit: spec.unit, max: spec.max });
+    if (spec.type === 'lines') return drawLines(chart, spec, { unit: spec.unit, xTicks: spec.xTicks });
+    if (spec.type === 'panels') return drawPanels(chart, spec);
+    if (spec.type === 'heatmap') return drawHeatmap(chart, spec);
     const items = (spec.parts ?? spec.bars).map((x) => ({ ...x, text: String(x.value), label: esc(x.label) }));
     if (spec.type === 'split') drawSplit(chart, items, spec.unit);
     else drawBars(chart, items, spec.unit, spec.max);
   };
   draw();
   return { chart, draw };
+}
+
+// ---------- grouped bars, several lines, panels, heat maps ----------
+
+const hex = (c) => { const m = /^#?([0-9a-f]{6})$/i.exec(c.trim()); return m ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+/** a mixed with b, p of the way to b, as #rrggbb; a when either is not a plain hex colour. */
+function mix(a, b, p) {
+  const x = hex(a), y = hex(b);
+  if (!x || !y) return a;
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * p).toString(16).padStart(2, '0')).join('');
+}
+const phoneOf = (host) => !!host.closest('.phone');
+
+/**
+ * Bars in groups into a .chart: a heading per group, a row per series labelled with its name, so no legend is needed.
+ * opts.max fixes the end of the axis (panels share one), opts.unit follows each number.
+ */
+export function drawGroups(host, data, opts = {}) {
+  const t = themeOf(host);
+  const width = Math.floor(host.clientWidth) || 640, phone = phoneOf(host) || width < 420;
+  const { series, groups, accent } = data;
+  const tone = t[accent.tone ?? 'accent'];
+  const rows = groups.flatMap((g) => series.map((s, i) => ({ g: g.label, s, v: g.values[i], hi: (accent.series === undefined || accent.series === s) && (accent.group === undefined || accent.group === g.label) })));
+  const fmt = (v) => num(v) + (opts.unit ?? '');
+  const top = opts.max ?? Math.max(...rows.map((r) => r.v));
+  const indent = 0;
+  const labelW = Math.ceil(Math.max(widest(host, series, t.body) + indent, widest(host, groups.map((g) => g.label), t.body, 600))) + 14;
+  const valueW = Math.ceil(widest(host, rows.map((r) => fmt(r.v)), t.body, 600)) + 12;
+  // A group's heading sits close above its own bars, with more room above it, so the groups read as blocks.
+  const rowH = Math.max(phone ? 34 : 38, Math.ceil(t.body * 1.75)), headH = Math.max(30, Math.ceil(t.body * 1.7)), above = 22;
+  const step = series.length * rowH + headH + above;
+  plotInto(host, t, {
+    width, height: groups.length * step - above + 8, marginLeft: labelW, marginRight: valueW, marginTop: headH, marginBottom: 8,
+    // Every bar carries its number, so an axis would only repeat it; the zero line is kept.
+    x: { domain: [0, top], axis: null },
+    y: { domain: series, axis: null, padding: 0.18 },
+    fy: { domain: groups.map((g) => g.label), axis: null, paddingInner: (headH + above) / step, paddingOuter: 0 },
+    marks: [
+      Plot.ruleX([0], { stroke: t.line }),
+      Plot.barX(rows, { x: 'v', y: 's', fy: 'g', fill: (r) => (r.hi ? tone : t.fill), rx: 2 }),
+      Plot.text(rows, { x: 'v', y: 's', fy: 'g', text: (r) => fmt(r.v), dx: 6, textAnchor: 'start', fill: (r) => (r.hi ? tone : t.ink), fontWeight: (r) => (r.hi ? 600 : 400), fontSize: t.body }),
+      Plot.text(rows, { x: 0, y: 's', fy: 'g', text: 's', dx: -labelW + indent, textAnchor: 'start', fill: t.ink, fontSize: t.body }),
+      Plot.text(groups.map((g) => g.label), { fy: (d) => d, frameAnchor: 'top-left', dx: -labelW, dy: -headH + 2, text: (d) => d, textAnchor: 'start', lineAnchor: 'top', fill: opts.quietGroups ? t.muted : t.ink, fontWeight: 600, fontSize: t.body * 1.06 }),
+    ],
+  });
+}
+
+/**
+ * Two or three lines on one axis into a .chart. Each is named at its right end in its own colour; the accent line is
+ * drawn last and thicker, the others in two greys. opts.domain fixes the y axis (panels share one).
+ */
+export function drawLines(host, data, opts = {}) {
+  const t = themeOf(host);
+  const width = Math.floor(host.clientWidth) || 640, phone = phoneOf(host) || width < 420;
+  const greys = [t.fill2, t.fill];
+  const lines = data.series.map((l) => ({ ...l, pts: l.points.map((p) => ({ x: toX(p.x), y: p.y, s: l.label })) }));
+  const others = lines.filter((l) => l.label !== data.accent);
+  others.forEach((l, i) => { l.color = greys[i % 2]; l.w = 2.25; });
+  const hi = lines.find((l) => l.label === data.accent);
+  hi.color = t.accent; hi.w = 3.25;
+  const ys = lines.flatMap((l) => l.pts.map((p) => p.y));
+  const zero = data.zero ?? true;
+  const domain = opts.domain ?? [zero ? Math.min(0, ...ys) : Math.min(...ys), Math.max(...ys) * 1.04];
+  const fmt = (d) => num(d) + (opts.unit ?? '');
+  const height = phone ? 260 : 300, mt = data.mark ? 28 : 10, mb = 36;
+  const ends = [...others, hi].map((l) => ({ l, last: l.pts[l.pts.length - 1] }));
+  const labelW = Math.ceil(widest(host, ends.map((e) => e.l.label), t.small, 600)) + 14;
+  // Each name sits level with its line's last point, pushed apart when two would overlap.
+  const py = (v) => mt + (1 - (v - domain[0]) / (domain[1] - domain[0])) * (height - mt - mb);
+  const placed = ends.map((e) => ({ ...e, y: py(e.last.y) })).sort((a, b) => a.y - b.y);
+  const gap = t.small * 1.3;
+  for (let i = 1; i < placed.length; i++) placed[i].y = Math.max(placed[i].y, placed[i - 1].y + gap);
+  for (let i = placed.length - 2; i >= 0; i--) placed[i].y = Math.min(placed[i].y, placed[i + 1].y - gap);
+  const tickW = Math.ceil(widest(host, [fmt(domain[1]), fmt(domain[0])], t.small)) + 12;
+  const markPt = data.mark && hi.pts.find((p) => +p.x === +toX(data.mark.x));
+  plotInto(host, t, {
+    width, height, marginLeft: tickW, marginRight: labelW, marginTop: mt, marginBottom: mb,
+    x: opts.xTicks ? { label: null, insetLeft: 18, ticks: opts.xTicks.map((k) => toX(k.x)), tickFormat: (d) => opts.xTicks.find((k) => +toX(k.x) === +d)?.label ?? '' }
+      : { label: null, insetLeft: 18, ticks: width < 520 ? 3 : 5, tickFormat: typeof lines[0].pts[0].x === 'number' ? (d) => num(d) : undefined },
+    y: { domain, nice: false, label: null, grid: true, ticks: 4, tickSize: 0, tickFormat: fmt },
+    marks: [
+      zero ? Plot.ruleY([0], { stroke: t.line }) : null,
+      ...[...others, hi].map((l) => Plot.lineY(l.pts, { x: 'x', y: 'y', stroke: l.color, strokeWidth: l.w })),
+      Plot.text(placed, { x: (e) => e.last.x, y: (e) => domain[0] + (1 - (e.y - mt) / (height - mt - mb)) * (domain[1] - domain[0]), text: (e) => e.l.label, dx: 8, textAnchor: 'start', fill: (e) => (e.l === hi ? t.accent : t.muted), fontWeight: 600, fontSize: t.small }),
+      markPt ? Plot.dot([markPt], { x: 'x', y: 'y', r: 6, fill: t.accent }) : null,
+      markPt ? Plot.text([markPt], { x: 'x', y: 'y', text: () => data.mark.label, dy: -16, fill: t.accent, fontWeight: 600, fontSize: t.small }) : null,
+    ],
+  });
+}
+
+/** The same chart for each part, side by side on one scale; stacked on a phone. */
+export function drawPanels(host, spec) {
+  host.className = 'panels';
+  host.innerHTML = '';
+  const charts = spec.panels.map((p) => {
+    const box = document.createElement('div');
+    box.className = 'panel';
+    box.innerHTML = `<h2>${esc(p.label)}</h2>`;
+    const chart = document.createElement('div');
+    box.appendChild(chart);
+    host.appendChild(box);
+    return { p, chart };
+  });
+  if (spec.chart === 'groups') {
+    const max = spec.max ?? Math.max(...spec.panels.flatMap((p) => p.groups.flatMap((g) => g.values)));
+    for (const { p, chart } of charts) {
+      const accent = spec.accent.group && !p.groups.some((g) => g.label === spec.accent.group) ? { ...spec.accent, series: '\u0000' } : spec.accent;
+      drawGroups(chart, { series: spec.series, groups: p.groups, accent }, { unit: spec.unit, max, quietGroups: true });
+    }
+  } else {
+    const ys = spec.panels.flatMap((p) => p.series.flatMap((l) => l.points.map((q) => q.y)));
+    const zero = spec.zero ?? true;
+    const domain = [zero ? Math.min(0, ...ys) : Math.min(...ys), Math.max(...ys) * 1.04];
+    for (const { p, chart } of charts) drawLines(chart, { series: p.series, accent: spec.accent, zero }, { unit: spec.unit, domain, xTicks: spec.xTicks });
+  }
+}
+
+/**
+ * A heat map into a .chart: the colour runs from pale to the accent, one hue, so darker is always more. The scale is
+ * drawn above the grid at readable size. A marked cell is outlined and named in the scale line.
+ */
+export function drawHeatmap(host, spec) {
+  const t = themeOf(host);
+  const width = Math.floor(host.clientWidth) || 640, phone = phoneOf(host) || width < 420;
+  const cells = spec.rows.flatMap((r, i) => spec.columns.map((c, j) => ({ r: String(r), c: String(c), v: spec.values[i][j] })));
+  const vs = cells.map((d) => d.v), lo = Math.min(...vs), hi = Math.max(...vs);
+  // One hue, near white to dark: darker is always more, and busy does not read as alarm the way red does.
+  const scale = Plot.scale({ color: { type: 'linear', scheme: 'blues', domain: [lo - (hi - lo) * 0.08, hi] } });
+  const colour = (v) => scale.apply(v);
+  const ramp = [0, 0.25, 0.5, 0.75, 1].map((p) => colour(lo + (hi - lo) * p)).join(', ');
+  const fmt = (v) => num(v) + (spec.unit ?? '');
+  const cols = spec.columns.map(String), rows = spec.rows.map(String);
+  const labelW = Math.ceil(widest(host, rows, t.small)) + 12;
+  const cellW = (width - labelW - 8) / cols.length;
+  const show = cellW >= 48 && cells.length <= 72;
+  // Label every k-th column, k a divisor of the count where one exists, so 24 hours read 12am, 6am, 12pm, 6pm.
+  const most = phone ? 5 : 9, steps = [1, 2, 3, 4, 5, 6, 8, 10, 12].filter((k) => cols.length / k <= most);
+  const every = steps.find((k) => cols.length % k === 0) ?? steps[0] ?? Math.ceil(cols.length / most);
+  const rowH = phone ? 30 : 36;
+  const key = document.createElement('p');
+  key.className = 'hm-key';
+  key.innerHTML = `<span>${esc(fmt(lo))}</span><i style="background:linear-gradient(90deg, ${ramp})"></i><span>${esc(fmt(hi))}</span>`
+    + (spec.mark ? `<span style="margin-left:14px;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;color:${t.ink};font-weight:600"><i style="width:16px;height:16px;border:2.5px solid ${t.accent};border-radius:2px;background:none"></i>${esc(spec.mark.label)}</span>` : '');
+  plotInto(host, t, {
+    width, height: rows.length * rowH + 36, marginLeft: labelW, marginRight: 8, marginTop: 0, marginBottom: 36,
+    x: { domain: cols, label: null, tickSize: 0, tickFormat: (d, i) => (i % every === 0 ? d : '') , padding: 0.06 },
+    y: { domain: rows, label: null, tickSize: 0, padding: 0.08 },
+    marks: [
+      Plot.cell(cells, { x: 'c', y: 'r', fill: (d) => colour(d.v), inset: 0.5 }),
+      show ? Plot.text(cells, { x: 'c', y: 'r', text: (d) => fmt(d.v), fill: (d) => ((d.v - lo) / (hi - lo || 1) > 0.55 ? '#ffffff' : t.ink), fontSize: t.small }) : null,
+      // The marked cell: an accent ring, the one thing in the chart that is not the scale.
+      spec.mark ? Plot.cell([{ r: String(spec.mark.row), c: String(spec.mark.column) }], { x: 'c', y: 'r', fill: 'none', stroke: t.accent, strokeWidth: 2.5 }) : null,
+    ],
+  });
+  key.style.marginLeft = labelW + 'px';
+  host.prepend(key);
 }

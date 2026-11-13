@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 import { ensureBuilt } from '../viz/build.mjs';
@@ -14,6 +15,12 @@ import { parseSpec } from '../viz/spec.js';
 
 const HOME = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const url = (...p) => pathToFileURL(path.join(HOME, ...p)).href;
+/** A dependency's file, wherever npm put the package: figkit's own node_modules, or one hoisted above it. */
+const dep = (name, ...p) => {
+  const dir = createRequire(import.meta.url).resolve.paths(name).map((d) => path.join(d, name)).find((d) => fs.existsSync(d));
+  if (!dir) { console.error(`figkit: cannot find ${name}; run npm install in the figkit folder.`); process.exit(1); }
+  return pathToFileURL(path.join(dir, ...p)).href;
+};
 const args = process.argv.slice(2);
 
 if (args.length === 0 || args[0] === '-h' || args[0] === '--help') {
@@ -39,18 +46,19 @@ if (/\.json$/i.test(src)) {
     console.log(`This chart spec has ${spec.problems.length} problem${spec.problems.length === 1 ? '' : 's'}:\n${spec.problems.map((p) => `  - ${p}`).join('\n')}`);
     process.exit(1);
   }
-  body = `<main class="fig ${spec.spec.type === 'entities' ? 'entities-fig' : 'chart'}"><script type="application/json" id="figkit-spec">${JSON.stringify(spec.spec).replace(/</g, '\\u003c')}</script></main>`;
+  const cls = [spec.spec.type === 'entities' ? 'entities-fig' : 'chart', spec.spec.type === 'panels' ? 'panels-fig' : '', spec.spec.style ?? ''].filter(Boolean).join(' ');
+  body = `<main class="fig ${cls}"><script type="application/json" id="figkit-spec">${JSON.stringify(spec.spec).replace(/</g, '\\u003c')}</script></main>`;
 } else if (!/class="[^"]*\bfig\b/.test(body)) body = `<main class="fig">\n${body}\n</main>`;
 await ensureBuilt();
 
 const fonts = ['newsreader/400.css', 'newsreader/400-italic.css', 'geist-sans/400.css', 'geist-sans/500.css', 'geist-sans/600.css', 'geist-mono/400.css', 'geist-mono/500.css']
-  .map((f) => `<link rel="stylesheet" href="${url('node_modules/@fontsource', f)}">`).join('\n');
+  .map((f) => `<link rel="stylesheet" href="${dep('@fontsource/' + f.split('/')[0], f.split('/')[1])}">`).join('\n');
 const page_html = `<!doctype html><html><head><meta charset="utf-8">
 <base href="${pathToFileURL(path.dirname(src) + path.sep).href}">
 ${fonts}
 <link rel="stylesheet" href="${url('runtime/fig.css')}">
-<script src="${url('node_modules/d3/dist/d3.min.js')}"></script>
-<script src="${url('node_modules/@observablehq/plot/dist/plot.umd.min.js')}"></script>
+<script src="${dep('d3', 'dist/d3.min.js')}"></script>
+<script src="${dep('@observablehq/plot', 'dist/plot.umd.min.js')}"></script>
 <script src="${url('dist/viz.iife.js')}"></script>
 <script src="${url('runtime/fig.js')}"></script>
 <style>body { display: inline-block; }</style>
@@ -93,7 +101,7 @@ try {
     if (phone) await page.addInitScript(() => { window.__figPhone = true; });
     await page.goto(pathToFileURL(wrapped).href);
     await page.waitForFunction('window.__figDone === true', null, { timeout: 30000 });
-    const r = await page.evaluate(() => ({ problems: window.fig.problems, info: window.fig.info, sides: !!document.querySelector('.fig .sides, .fig .entities'), entities: !!document.querySelector('.fig .entities') }));
+    const r = await page.evaluate(() => ({ problems: window.fig.problems, info: window.fig.info, sides: !!document.querySelector('.fig .sides, .fig .entities, .fig .panels, .fig.report'), entities: !!document.querySelector('.fig .entities'), panels: !!document.querySelector('.fig .panels'), stack: !!document.querySelector('.fig .sides') }));
     await page.locator('.fig').first().screenshot({ path: shot });
     await page.close();
     return { ...r, problems: [...errors.map((e) => `Script error: ${e}`), ...r.problems] };
@@ -108,7 +116,7 @@ try {
 
   const { info } = desk;
   const lines = [`Figure:       ${png}  (${info.width * 2}×${info.height * 2})`];
-  if (mob) lines.push(`Phone layout: ${phonePng}  (${mob.info.width * 2}×${mob.info.height * 2}), ${desk.entities ? 'the records in two columns' : 'the sides stacked'}, for a viewer to show on a phone`);
+  if (mob) lines.push(`Phone layout: ${phonePng}  (${mob.info.width * 2}×${mob.info.height * 2}), ${desk.entities ? 'the records in two columns' : desk.panels ? 'the panels stacked' : desk.stack ? 'the sides stacked' : 'at phone width'}, for a viewer to show on a phone`);
   lines.push(`Phone inline: ${inline}  (preview only)`);
   const ph = (mob ?? desk).info.phone;
   const sizes = [['the title', ph?.title], ['headings', ph?.heading], ['body', ph?.body]].filter(([, v]) => v != null).map(([k, v]) => `${k} ${v}px`);

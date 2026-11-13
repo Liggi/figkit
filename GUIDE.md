@@ -105,6 +105,60 @@ mark's `x` must be one of them. The y axis starts at zero unless `"zero": false`
   "mark": { "x": "2026-10-14", "label": "212, launch day" } }
 ```
 
+`groups`: a few things measured for each of 2 to 6 groups, 2 to 4 series, one bar per series in each group, all
+from zero. Use it when the point is a difference that shows in some groups and not others (before and after, one
+segment against another); for one number per thing, use `bars`. Each group gets a heading and each bar its series
+name and number, so there is no legend and no axis. `accent` is required: `{ "series" }` colours that series in every
+group, `{ "series", "group" }` colours one bar; `"tone": "bad"` or `"good"` when the bar is a result.
+
+```json
+{ "type": "groups", "title": "Only the new carrier got slower in December",
+  "note": "Median days from dispatch to doorstep", "unit": " days",
+  "series": ["Old carrier", "New carrier"],
+  "groups": [ { "label": "November", "values": [2.2, 2.1] }, { "label": "December", "values": [2.4, 3.6] } ],
+  "accent": { "series": "New carrier", "group": "December", "tone": "bad" } }
+```
+
+`lines`: 2 or 3 lines on one axis, each named at its right end in its own colour. `accent` (required) names the
+line the title is about; the others are grey. `mark` labels one point on the accent line. `xTicks` sets the axis
+labels, e.g. hours as 12am, 6am, 12pm, 6pm, rather than 0 to 23. More than 3 lines is `panels`.
+
+```json
+{ "type": "lines", "title": "Weekday orders peak at noon", "note": "Orders per hour",
+  "series": [ { "label": "Weekdays", "points": [ { "x": 0, "y": 3 }, { "x": 12, "y": 30 }, { "x": 23, "y": 4 } ] },
+              { "label": "Weekends", "points": [ { "x": 0, "y": 4 }, { "x": 12, "y": 22 }, { "x": 23, "y": 6 } ] } ],
+  "accent": "Weekdays", "mark": { "x": 12, "label": "30 at noon" },
+  "xTicks": [ { "x": 0, "label": "12am" }, { "x": 12, "label": "12pm" } ] }
+```
+
+`panels`: small multiples, the same `groups` or `lines` chart drawn for 2 to 4 parts side by side, on one shared
+scale so the panels compare; stacked on a phone. `chart` says which. For `groups`, `series` and `accent` are given once
+at the top and each panel has its `groups`; for `lines`, `accent` is the line's label and every panel has the same
+lines in the same order. Use it when one chart would need more than 3 lines or 4 series, or the parts measure
+different things on the same scale.
+
+```json
+{ "type": "panels", "chart": "groups", "title": "The cheaper plan answers almost as fast as the premium one",
+  "note": "Share of tickets answered within an hour", "unit": "%", "max": 100,
+  "series": ["Basic", "Standard", "Premium"], "accent": { "series": "Standard" },
+  "panels": [ { "label": "Email", "groups": [ { "label": "Weekdays", "values": [61, 84, 89] } ] },
+              { "label": "Chat", "groups": [ { "label": "Weekdays", "values": [72, 91, 94] } ] } ] }
+```
+
+`heatmap`: a grid of values over two dimensions (day by hour, team by week), coloured from pale to dark blue: darker
+is always more. Up to 12 `rows` and 31 `columns`; `values` is one array per row. `note` (required) says what the
+colour counts, and the scale is drawn above the grid. Here the colour is the measure, so the one-accent rule moves:
+`mark` outlines the one cell to notice in the accent colour and names it beside the scale. Cells show their numbers
+when there is room. Columns label themselves at even steps, so give hours as "12am", "1am", … and they read 12am,
+6am, 12pm, 6pm.
+
+```json
+{ "type": "heatmap", "title": "The help desk is busiest midweek mornings", "note": "Tickets opened per hour",
+  "rows": ["Mon", "Tue", "Wed"], "columns": ["9am", "10am", "11am", "12pm"],
+  "values": [ [22, 25, 27, 28], [23, 26, 29, 30], [24, 27, 30, 32] ],
+  "mark": { "row": "Wed", "column": "12pm", "label": "Busiest: Wed noon" } }
+```
+
 `entities`: what the things are and which points at which. 2 to 5 `records`, each with an `id` you use in `refs`,
 a `name` in the reader's words, and up to 4 `fields` that say what it holds (put a table name here only if the reader
 needs it). Each of up to 8 `refs` is a pointer the `from` record holds to the `to` record: `count` is how many `from`
@@ -132,6 +186,9 @@ More than 5 records is two figures: the core records, then one corner of it with
 Flows (boxes and arrows) have no spec: write them in HTML, below.
 
 - `title` (required) is the point, 14 words at most. `note` is the reading line under it; `source` a footer.
+- `"style": "report"` draws a light chart in one sans font, for a chart that sits in a page: a research report, a doc.
+  It also draws a phone layout, `chart.phone.png`. Leave it out for the default dark figure for a dark chat.
+- Keep `note` to what is measured, and "lower is better" where it applies; dates and method go in `source`.
 - `unit` is printed straight after each number. `show` on an item replaces its printed value, e.g. `"11 of 29"`.
 - `tone` is `accent` for what to notice, `good` or `bad` when it is a result; at most two tones in a chart. Leave the rest grey.
 - `bars` takes `max` to fix the end of the axis (e.g. 100 for percentages) and a short `note` per bar.
@@ -141,7 +198,7 @@ Flows (boxes and arrows) have no spec: write them in HTML, below.
 ## The page
 
 ```html
-<main class="fig">                 <!-- add "detail" for a map to open and read; "paper" for a light figure for docs -->
+<main class="fig">                 <!-- add "detail" for a map to open and read; "paper" for a light figure for docs; "report" for a light chart in a page, in one sans font -->
   <header>
     <h1>The point, stated. <em>The part to notice</em></h1>
     <p class="read">How to read it. <b class="t-accent">Orange</b> means code.</p>
@@ -262,7 +319,9 @@ A few numbers compared:
 </fig-bars>
 ```
 
-Anything else (lines, dots, intervals, distributions, small multiples) is Observable Plot, already loaded with d3:
+Grouped bars, several lines, small multiples and heat maps have specs (`groups`, `lines`, `panels`, `heatmap`); use
+them when the chart is the whole figure. Anything else (dots, intervals, distributions, a chart beside boxes) is
+Observable Plot, already loaded with d3:
 
 ```html
 <div id="chart"></div>
@@ -279,7 +338,7 @@ Anything else (lines, dots, intervals, distributions, small multiples) is Observ
 </script>
 ```
 
-`theme` has `ink`, `muted`, `soft`, `line`, `accent`, `second`, `good`, `bad`. Draw the series in `soft`, the thing to
+`theme` has `ink`, `muted`, `soft`, `fill`, `fill2`, `line`, `accent`, `second`, `good`, `bad`. Draw the series in `fill`, the thing to
 notice in `accent`, and label it directly on the chart; no legends. Start bar axes at zero.
 
 ## Screenshots

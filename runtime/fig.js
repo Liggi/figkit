@@ -544,7 +544,7 @@
     if (!el) { fig.problems.push(`fig.plot: nothing matches ${target}.`); return; }
     el.classList.add('chart');
     const width = Math.floor(el.clientWidth) || 640;
-    const t = { ink: css('--ink'), muted: css('--muted'), soft: css('--soft'), line: css('--line'), hair: css('--hair'), accent: css('--accent'), second: css('--second'), good: css('--good'), bad: css('--bad'), paper: css('--paper'), panel: css('--panel') };
+    const t = { ink: css('--ink'), muted: css('--muted'), soft: css('--soft'), fill: css('--fill'), fill2: css('--fill2'), line: css('--line'), hair: css('--hair'), accent: css('--accent'), second: css('--second'), good: css('--good'), bad: css('--bad'), paper: css('--paper'), panel: css('--panel') };
     try {
       const opts = build({ Plot: window.Plot, d3: window.d3, width, theme: t });
       const size = parseFloat(css('--small')) || 15;
@@ -635,7 +635,10 @@
     if (near.length) P.push(`Almost aligned but not quite: ${near.slice(0, 6).join('; ')}${near.length > 6 ? `; and ${near.length - 6} more` : ''}. Put them in one row, column or grid so they share the edge.`);
 
     // Too much on the page.
-    const words = R.innerText.split(/\s+/).filter(Boolean).length;
+    // Panels repeat the same labels in each panel; a label read once counts once.
+    const panelText = R.querySelector('.panels') ? [...new Set([...R.querySelectorAll('.panels text, .panels h2')].map((e) => e.textContent.trim()))].join(' ') : null;
+    const outside = R.querySelector('.panels') ? [...R.children].filter((c) => !c.matches('script, style') && !c.querySelector('.panels') && !c.matches('.panels')).map((c) => c.innerText).join(' ') : null;
+    const words = (panelText !== null ? outside + ' ' + panelText : R.innerText).split(/\s+/).filter(Boolean).length;
     const nodes = R.querySelectorAll('.node:not(.bare), .decision').length, arrows = (fig.wires ?? []).length;
     const budget = detail ? { words: 190, nodes: 18, arrows: 18 } : { words: 70, nodes: 5, arrows: 8 };
     if (words > budget.words) P.push(`${words} words; a ${detail ? 'detail' : 'glance'} figure holds about ${budget.words}. Cut sentences that explain, and keep labels.`);
@@ -644,6 +647,11 @@
     const tones = TONES.filter((t) => R.querySelector(`.${t}, [${t}], .t-${t}`));
     if (tones.length > 2) P.push(`${tones.length} colours carry meaning (${tones.join(', ')}); use one for what the reader must notice and at most one more.`);
     for (const o of obs) if (o.text || o.el.matches('.node')) { const t = o.el.innerText ?? ''; if ((t.match(/ [·|•] /g) ?? []).length >= 1 && !o.el.querySelector('*')) P.push(`${name(o.el)} strings facts together with separators; give each fact its own line or cut one.`); }
+    // A face that never loaded draws in whatever the machine has, and every measurement above is of that fallback.
+    const faces = [...document.fonts];
+    const families = [...new Set(['--sans', '--serif'].map((v) => css(v).split(',')[0].replace(/["']/g, '').trim()))];
+    const missing = families.filter((f) => !faces.some((x) => x.family.replace(/["']/g, '') === f && x.status === 'loaded'));
+    if (missing.length) P.push(`figkit's fonts did not load (${missing.join(', ')}); the figure is drawn in fallback fonts. Reinstall figkit with its dependencies.`);
     const h1 = R.querySelector('h1');
     if (!h1) P.push('No <h1>: give the figure a title that states its point.');
     else if (h1.innerText.split(/\s+/).length > 14) P.push('The title is over 14 words; state the point more shortly.');

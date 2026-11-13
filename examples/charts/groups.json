@@ -1,0 +1,40 @@
+{
+ "type": "groups",
+ "style": "report",
+ "title": "Only the new carrier got slower in December",
+ "note": "Median days from dispatch to doorstep",
+ "unit": " days",
+ "series": [
+  "Old carrier",
+  "New carrier"
+ ],
+ "groups": [
+  {
+   "label": "October",
+   "values": [
+    2.1,
+    2.0
+   ]
+  },
+  {
+   "label": "November",
+   "values": [
+    2.2,
+    2.1
+   ]
+  },
+  {
+   "label": "December",
+   "values": [
+    2.4,
+    3.6
+   ]
+  }
+ ],
+ "accent": {
+  "series": "New carrier",
+  "group": "December",
+  "tone": "bad"
+ },
+ "source": "Invented example data"
+}

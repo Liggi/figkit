@@ -1,0 +1,62 @@
+{
+ "type": "panels",
+ "style": "report",
+ "chart": "groups",
+ "title": "The cheaper plan answers almost as fast as the premium one",
+ "note": "Share of tickets answered within an hour",
+ "unit": "%",
+ "max": 100,
+ "series": [
+  "Basic",
+  "Standard",
+  "Premium"
+ ],
+ "accent": {
+  "series": "Standard"
+ },
+ "panels": [
+  {
+   "label": "Email",
+   "groups": [
+    {
+     "label": "Weekdays",
+     "values": [
+      61,
+      84,
+      89
+     ]
+    },
+    {
+     "label": "Weekends",
+     "values": [
+      38,
+      70,
+      74
+     ]
+    }
+   ]
+  },
+  {
+   "label": "Chat",
+   "groups": [
+    {
+     "label": "Weekdays",
+     "values": [
+      72,
+      91,
+      94
+     ]
+    },
+    {
+     "label": "Weekends",
+     "values": [
+      55,
+      83,
+      86
+     ]
+    }
+   ]
+  }
+ ],
+ "source": "Invented example data"
+}
